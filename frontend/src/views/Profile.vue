@@ -220,15 +220,15 @@ watch(() => route.params.id, async (newId) => {
         <!-- Stats -->
         <div class="flex space-x-8 mt-4">
           <div class="text-center cursor-pointer hover:text-emerald-500 transition-colors">
-            <div class="text-lg font-bold text-gray-900">0</div>
+            <div class="text-lg font-bold text-gray-900">{{ profileUser?.following_count || 0 }}</div>
             <div class="text-sm text-gray-500">关注</div>
           </div>
           <div class="text-center cursor-pointer hover:text-emerald-500 transition-colors">
-            <div class="text-lg font-bold text-gray-900">0</div>
+            <div class="text-lg font-bold text-gray-900">{{ profileUser?.followers_count || 0 }}</div>
             <div class="text-sm text-gray-500">粉丝</div>
           </div>
           <div class="text-center">
-            <div class="text-lg font-bold text-gray-900">0</div>
+            <div class="text-lg font-bold text-gray-900">{{ profileUser?.likes_count || 0 }}</div>
             <div class="text-sm text-gray-500">获赞</div>
           </div>
         </div>

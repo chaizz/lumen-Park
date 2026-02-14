@@ -56,9 +56,12 @@ async def login_access_token(
 
 @router.get("/me", response_model=schemas.UserResponse)
 async def read_users_me(
+    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
-    return current_user
+    # Get stats
+    stats = await service.get_user_stats(db, current_user.id)
+    return {**current_user.__dict__, **stats}
 
 @router.put("/me", response_model=schemas.UserResponse)
 async def update_user_me(
@@ -85,7 +88,10 @@ async def update_user_me(
             )
             
     user = await service.update_user(db, db_user=current_user, user_in=user_in)
-    return user
+    
+    # Get stats for updated user
+    stats = await service.get_user_stats(db, user.id)
+    return {**user.__dict__, **stats}
 
 @router.get("/{user_id}", response_model=schemas.UserResponse)
 async def read_user_by_id(
@@ -95,4 +101,7 @@ async def read_user_by_id(
     user = await service.get_user(db, user_id=user_id)
     if user == None:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+        
+    # Get stats
+    stats = await service.get_user_stats(db, user.id)
+    return {**user.__dict__, **stats}

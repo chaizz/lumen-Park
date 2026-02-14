@@ -23,6 +23,11 @@ class UserResponse(UserBase):
     created_at: datetime
     updated_at: datetime
     
+    # Stats
+    followers_count: int = 0
+    following_count: int = 0
+    likes_count: int = 0
+    
     model_config = ConfigDict(from_attributes=True)
 
 class Token(BaseModel):
