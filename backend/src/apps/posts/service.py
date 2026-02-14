@@ -93,7 +93,8 @@ async def create_post(db: AsyncSession, post_in: PostCreate, user_id: str) -> Po
             db.add(db_recipe)
         
     await db.commit()
-    await db.refresh(db_post)
+    # Remove refresh here, because get_post will re-fetch everything with eager loading.
+    # await db.refresh(db_post)
     return await get_post(db, db_post.id)
 
 async def increment_views(db: AsyncSession, post_id: str):
