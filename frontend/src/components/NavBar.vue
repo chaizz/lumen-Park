@@ -46,7 +46,8 @@ const goToHome = () => {
   <div class="h-16 border-b border-gray-200 bg-white flex items-center px-4 sticky top-0 z-50">
     <!-- Logo -->
     <div class="flex items-center mr-8 cursor-pointer" @click="goToHome">
-      <h1 class="text-xl font-bold text-gray-800">Lumen Park</h1>
+      <img src="/logo.svg" alt="Lumen Park" class="w-8 h-8 mr-2" />
+      <h1 class="text-xl font-bold text-gray-800 tracking-tight">Lumen Park</h1>
     </div>
 
     <!-- Center Navigation -->
