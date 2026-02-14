@@ -168,7 +168,11 @@ const handlePublish = async () => {
 
     await request.post('/posts/', payload);
     ElMessage.success('发布成功！');
-    router.push('/profile');
+    // Clear form instead of redirecting
+    postTitle.value = '';
+    postDescription.value = '';
+    images.value = [];
+    selectedImageId.value = null;
   } catch (error: any) {
     ElMessage.error(error.response?.data?.detail || '发布失败');
   } finally {
