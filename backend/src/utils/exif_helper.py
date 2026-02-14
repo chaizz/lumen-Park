@@ -13,27 +13,35 @@ def format_shutter_speed(val):
     if not val:
         return None
     try:
-        # If it's a very small float like 0.0016666, convert to fraction like 1/600
-        if isinstance(val, float) and val < 1:
-            frac = Fraction(val).limit_denominator(10000)
-            return str(frac)
-        # If it's a string, just clean it and check length
-        val_str = str(val)
-        if len(val_str) > 20: # DB limit is 20
-             # Try to shorten if it's a long decimal
-             if '.' in val_str:
-                 try:
-                     f = float(val_str)
-                     if f < 1:
-                         return str(Fraction(f).limit_denominator(10000))
-                     else:
-                         return f"{f:.1f}"
-                 except:
-                     pass
-             return val_str[:20]
-        return val_str
-    except:
-        return str(val)[:20]
+        f_val = None
+        # Handle tuple/list (numerator, denominator)
+        if isinstance(val, (tuple, list)) and len(val) == 2:
+            if val[1] == 0: return "0"
+            f_val = val[0] / val[1]
+        else:
+            # Try to convert to float
+            try:
+                f_val = float(val)
+            except (ValueError, TypeError):
+                # If conversion fails, maybe it's already a fraction string
+                if isinstance(val, str) and '/' in val:
+                     return val[:20]
+                raise
+
+        if f_val is not None:
+            if 0 < f_val < 1:
+                frac = Fraction(f_val).limit_denominator(10000)
+                return str(frac)
+            elif f_val == 0:
+                return "0"
+            else:
+                if f_val.is_integer():
+                    return str(int(f_val))
+                return f"{f_val:.1f}".rstrip('0').rstrip('.')
+    except Exception:
+        pass
+        
+    return str(val)[:20]
 
 def extract_exif(file_stream):
     exif_data = {}
