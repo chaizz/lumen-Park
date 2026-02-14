@@ -45,7 +45,15 @@ async def get_bookmarked_posts(db: AsyncSession, user_id: str) -> list[Post]:
 
 
 async def create_post(db: AsyncSession, post_in: PostCreate, user_id: str) -> Post:
-    # 1. Create Post
+    # 1. Handle Tags First (to avoid lazy load issues with new object)
+    tags = []
+    if post_in.tags:
+        tags = await get_or_create_tags(db, post_in.tags)
+        # Increment usage count
+        for tag in tags:
+            await increment_tag_count(db, tag.id)
+
+    # 2. Create Post with tags
     # Determine cover image (first one)
     cover_image_path = post_in.images[0].image_path if post_in.images else None
     
@@ -53,18 +61,11 @@ async def create_post(db: AsyncSession, post_in: PostCreate, user_id: str) -> Po
         user_id=user_id,
         image_path=cover_image_path, # Backward compatibility / Cover
         title=post_in.title,
-        description=post_in.description
+        description=post_in.description,
+        tags=tags # Assign tags directly in constructor
     )
     db.add(db_post)
     await db.flush() # flush to get ID
-
-    # 1.1 Handle Tags
-    if post_in.tags:
-        tags = await get_or_create_tags(db, post_in.tags)
-        db_post.tags = tags
-        # Increment usage count
-        for tag in tags:
-            await increment_tag_count(db, tag.id)
 
     # 2. Create PostImages and related Exif/Recipe
     for idx, img_in in enumerate(post_in.images):
