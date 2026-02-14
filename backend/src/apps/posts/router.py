@@ -1,6 +1,5 @@
-from typing import Any, List
-
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Any, List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.apps.posts import schemas, service
 from src.apps.users.models import User
@@ -23,9 +22,10 @@ async def read_posts(
     skip: int = 0,
     limit: int = 100,
     user_id: str = None,
+    tag_ids: Optional[List[str]] = Query(None),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
-    posts = await service.get_posts(db, skip=skip, limit=limit, user_id=user_id)
+    posts = await service.get_posts(db, skip=skip, limit=limit, user_id=user_id, tag_ids=tag_ids)
     return posts
 
 @router.get("/liked/{user_id}", response_model=List[schemas.PostResponse])

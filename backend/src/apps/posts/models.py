@@ -56,6 +56,9 @@ class Post(Base):
     # One-to-Many relationship with PostImage
     images = relationship("PostImage", back_populates="post", cascade="all, delete-orphan")
 
+    # Many-to-Many relationship with Tag
+    tags = relationship("Tag", secondary="post_tags", back_populates="posts")
+
 class PostImage(Base):
     __tablename__ = "post_images"
     

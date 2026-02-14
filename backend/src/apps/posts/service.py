@@ -1,10 +1,11 @@
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import update
 from sqlalchemy.orm import selectinload
+from src.apps.interactions.models import Bookmark, Like
 from src.apps.posts.models import ExifData, FujiRecipe, Post, PostImage
 from src.apps.posts.schemas import PostCreate
-from src.apps.interactions.models import Like, Bookmark
+from src.apps.tags.service import get_or_create_tags, increment_tag_count
 
 # ... existing code ...
 
@@ -12,7 +13,8 @@ async def get_liked_posts(db: AsyncSession, user_id: str) -> list[Post]:
     query = select(Post).join(Like, Like.post_id == Post.id).options(
         selectinload(Post.user),
         selectinload(Post.images).selectinload(PostImage.exif),
-        selectinload(Post.images).selectinload(PostImage.recipe)
+        selectinload(Post.images).selectinload(PostImage.recipe),
+        selectinload(Post.tags)
     ).filter(
         Like.user_id == user_id
     ).order_by(Like.created_at.desc())
@@ -28,7 +30,8 @@ async def get_bookmarked_posts(db: AsyncSession, user_id: str) -> list[Post]:
     query = select(Post).join(Bookmark, Bookmark.post_id == Post.id).options(
         selectinload(Post.user),
         selectinload(Post.images).selectinload(PostImage.exif),
-        selectinload(Post.images).selectinload(PostImage.recipe)
+        selectinload(Post.images).selectinload(PostImage.recipe),
+        selectinload(Post.tags)
     ).filter(
         Bookmark.user_id == user_id
     ).order_by(Bookmark.created_at.desc())
@@ -54,6 +57,14 @@ async def create_post(db: AsyncSession, post_in: PostCreate, user_id: str) -> Po
     )
     db.add(db_post)
     await db.flush() # flush to get ID
+
+    # 1.1 Handle Tags
+    if post_in.tags:
+        tags = await get_or_create_tags(db, post_in.tags)
+        db_post.tags = tags
+        # Increment usage count
+        for tag in tags:
+            await increment_tag_count(db, tag.id)
 
     # 2. Create PostImages and related Exif/Recipe
     for idx, img_in in enumerate(post_in.images):
@@ -97,22 +108,31 @@ async def get_post(db: AsyncSession, post_id: str) -> Post | None:
         .options(
             selectinload(Post.user),
             selectinload(Post.images).selectinload(PostImage.exif),
-            selectinload(Post.images).selectinload(PostImage.recipe)
+            selectinload(Post.images).selectinload(PostImage.recipe),
+            selectinload(Post.tags)
         )
         .filter(Post.id == post_id)
     )
     return result.scalars().first()
 
-async def get_posts(db: AsyncSession, skip: int = 0, limit: int = 100, user_id: str = None) -> list[Post]:
+async def get_posts(db: AsyncSession, skip: int = 0, limit: int = 100, user_id: str = None, tag_ids: list[str] = None) -> list[Post]:
     query = select(Post).options(
         selectinload(Post.user),
         # For list view, we might only need the first image or all, let's load all for now
         selectinload(Post.images).selectinload(PostImage.exif),
-        selectinload(Post.images).selectinload(PostImage.recipe)
+        selectinload(Post.images).selectinload(PostImage.recipe),
+        selectinload(Post.tags)
     )
     
     if user_id:
         query = query.filter(Post.user_id == user_id)
+        
+    if tag_ids:
+        # Filter posts that have ANY of the given tags (OR logic)
+        # For AND logic (posts that have ALL tags), we'd need multiple joins or group by having count
+        # Let's start with simple IN logic
+        from src.apps.tags.models import post_tags
+        query = query.join(Post.tags).filter(post_tags.c.tag_id.in_(tag_ids)).distinct()
         
     query = query.offset(skip).limit(limit).order_by(Post.created_at.desc())
     

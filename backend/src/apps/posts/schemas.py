@@ -4,7 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 from src.apps.posts.models import DynamicRange, FilmSimulation
 from src.apps.users.schemas import UserResponse
-
+from src.apps.tags.schemas import TagResponse
 
 class ExifDataBase(BaseModel):
     camera_make: Optional[str] = None
@@ -67,6 +67,7 @@ class PostBase(BaseModel):
 class PostCreate(PostBase):
     # Support multiple images. Backward compatible if needed but let's switch to new structure.
     images: List[PostImageCreate]
+    tags: List[str] = [] # List of tag names
 
 class PostResponse(PostBase):
     id: str
@@ -77,6 +78,7 @@ class PostResponse(PostBase):
     likes_count: int = 0
     
     images: List[PostImageResponse] = []
+    tags: List[TagResponse] = []
     
     user: Optional[UserResponse] = None
     
