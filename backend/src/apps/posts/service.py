@@ -93,8 +93,12 @@ async def create_post(db: AsyncSession, post_in: PostCreate, user_id: str) -> Po
             db.add(db_recipe)
         
     await db.commit()
-    # Expire the object to ensure fresh reload
-    await db.expire(db_post)
+    
+    # Remove the object from the session to force a clean reload from the database
+    # This avoids issues with the Identity Map reusing the stale object and 
+    # prevents MissingGreenlet errors during lazy/eager loading.
+    db.expunge(db_post)
+    
     return await get_post(db, db_post.id)
 
 async def increment_views(db: AsyncSession, post_id: str):
