@@ -1,0 +1,16 @@
+app:
+  name: Lumen Park
+  version: 0.1.0
+  debug: true
+
+database:
+  url: mysql+asyncmy://user:password@localhost/lumen_park
+
+redis:
+  url: redis://localhost:6379/0
+
+minio:
+  endpoint: localhost:9000
+  access_key: minioadmin
+  secret_key: minioadmin
+  bucket: lumen-park

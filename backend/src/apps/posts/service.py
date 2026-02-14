@@ -1,0 +1,125 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy import update
+from sqlalchemy.orm import selectinload
+from src.apps.posts.models import ExifData, FujiRecipe, Post, PostImage
+from src.apps.posts.schemas import PostCreate
+from src.apps.interactions.models import Like, Bookmark
+
+# ... existing code ...
+
+async def get_liked_posts(db: AsyncSession, user_id: str) -> list[Post]:
+    query = select(Post).join(Like, Like.post_id == Post.id).options(
+        selectinload(Post.user),
+        selectinload(Post.images)
+    ).filter(
+        Like.user_id == user_id
+    ).order_by(Like.created_at.desc())
+    
+    result = await db.execute(query)
+    posts = result.scalars().all()
+    # Ensure likes_count
+    for post in posts:
+        if post.likes_count is None: post.likes_count = 0
+    return posts
+
+async def get_bookmarked_posts(db: AsyncSession, user_id: str) -> list[Post]:
+    query = select(Post).join(Bookmark, Bookmark.post_id == Post.id).options(
+        selectinload(Post.user),
+        selectinload(Post.images)
+    ).filter(
+        Bookmark.user_id == user_id
+    ).order_by(Bookmark.created_at.desc())
+    
+    result = await db.execute(query)
+    posts = result.scalars().all()
+    # Ensure likes_count
+    for post in posts:
+        if post.likes_count is None: post.likes_count = 0
+    return posts
+
+
+async def create_post(db: AsyncSession, post_in: PostCreate, user_id: str) -> Post:
+    # 1. Create Post
+    # Determine cover image (first one)
+    cover_image_path = post_in.images[0].image_path if post_in.images else None
+    
+    db_post = Post(
+        user_id=user_id,
+        image_path=cover_image_path, # Backward compatibility / Cover
+        title=post_in.title,
+        description=post_in.description
+    )
+    db.add(db_post)
+    await db.flush() # flush to get ID
+
+    # 2. Create PostImages and related Exif/Recipe
+    for idx, img_in in enumerate(post_in.images):
+        db_image = PostImage(
+            post_id=db_post.id,
+            image_path=img_in.image_path,
+            width=img_in.width,
+            height=img_in.height,
+            order=idx
+        )
+        db.add(db_image)
+        await db.flush() # get image ID
+        
+        if img_in.exif:
+            db_exif = ExifData(
+                image_id=db_image.id,
+                **img_in.exif.model_dump()
+            )
+            db.add(db_exif)
+            
+        if img_in.recipe:
+            db_recipe = FujiRecipe(
+                image_id=db_image.id,
+                **img_in.recipe.model_dump()
+            )
+            db.add(db_recipe)
+        
+    await db.commit()
+    await db.refresh(db_post)
+    return await get_post(db, db_post.id)
+
+async def increment_views(db: AsyncSession, post_id: str):
+    await db.execute(
+        update(Post).where(Post.id == post_id).values(views_count=Post.views_count + 1)
+    )
+    await db.commit()
+
+async def get_post(db: AsyncSession, post_id: str) -> Post | None:
+    result = await db.execute(
+        select(Post)
+        .options(
+            selectinload(Post.user),
+            selectinload(Post.images).selectinload(PostImage.exif),
+            selectinload(Post.images).selectinload(PostImage.recipe)
+        )
+        .filter(Post.id == post_id)
+    )
+    return result.scalars().first()
+
+async def get_posts(db: AsyncSession, skip: int = 0, limit: int = 100, user_id: str = None) -> list[Post]:
+    query = select(Post).options(
+        selectinload(Post.user),
+        # For list view, we might only need the first image or all, let's load all for now
+        selectinload(Post.images).selectinload(PostImage.exif),
+        selectinload(Post.images).selectinload(PostImage.recipe)
+    )
+    
+    if user_id:
+        query = query.filter(Post.user_id == user_id)
+        
+    query = query.offset(skip).limit(limit).order_by(Post.created_at.desc())
+    
+    result = await db.execute(query)
+    posts = result.scalars().all()
+    
+    # Ensure likes_count is populated if it's None (though model default is 0)
+    for post in posts:
+        if post.likes_count is None:
+            post.likes_count = 0
+            
+    return posts
