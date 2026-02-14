@@ -115,34 +115,66 @@ onMounted(() => {
 <template>
   <div class="max-w-7xl mx-auto px-4 py-6" v-infinite-scroll="loadMore" :infinite-scroll-distance="200" :infinite-scroll-disabled="loading || noMore">
     
-    <!-- Filter Section -->
-    <div class="mb-8 bg-white rounded-xl shadow-sm p-4 border border-gray-100">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="font-bold text-gray-800 flex items-center">
-          <el-icon class="mr-2 text-emerald-600"><Filter /></el-icon> 场景与分类
-        </h2>
-        <el-radio-group v-model="activeCategory" size="small">
-          <el-radio-button label="all">全部</el-radio-button>
-          <el-radio-button label="lighting">光线</el-radio-button>
-          <el-radio-button label="location">地点</el-radio-button>
-          <el-radio-button label="subject">主题</el-radio-button>
-        </el-radio-group>
-      </div>
+    <!-- Filter Section (Redesigned) -->
+    <div class="mb-8 space-y-4">
       
-      <div class="flex flex-wrap gap-2">
-        <div 
-          v-for="tag in displayedTags" 
-          :key="tag.id"
-          class="px-3 py-1.5 rounded-full text-xs cursor-pointer transition-all duration-200 border"
-          :class="selectedTags.includes(tag.id) ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200'"
-          @click="toggleTag(tag.name)"
+      <!-- Level 1: Category Tabs -->
+      <div class="flex items-center space-x-2 overflow-x-auto no-scrollbar py-1">
+        <button 
+          class="px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-200 flex-shrink-0"
+          :class="activeCategory === 'all' ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'"
+          @click="activeCategory = 'all'"
         >
-          {{ tag.name }}
-        </div>
-        <div v-if="displayedTags.length === 0" class="text-xs text-gray-400 py-1">
-           暂无标签
-        </div>
+          全部
+        </button>
+        <button 
+          class="px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-200 flex-shrink-0"
+          :class="activeCategory === 'lighting' ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'"
+          @click="activeCategory = 'lighting'"
+        >
+          ✨ 光线
+        </button>
+        <button 
+          class="px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-200 flex-shrink-0"
+          :class="activeCategory === 'location' ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'"
+          @click="activeCategory = 'location'"
+        >
+          📍 地点
+        </button>
+        <button 
+          class="px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-200 flex-shrink-0"
+          :class="activeCategory === 'subject' ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'"
+          @click="activeCategory = 'subject'"
+        >
+          📷 主题
+        </button>
       </div>
+
+      <!-- Level 2: Tags (Horizontal Scroll) -->
+      <div class="relative group">
+        <!-- Left Fade Mask (visible when scrolled - implemented via CSS or simple overlay) -->
+        <div class="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[var(--bg-color)] to-transparent z-10 pointer-events-none"></div>
+        
+        <!-- Scroll Container -->
+        <div class="flex space-x-3 overflow-x-auto pb-2 px-1 no-scrollbar scroll-smooth">
+          <div 
+            v-for="tag in displayedTags" 
+            :key="tag.id"
+            class="flex-shrink-0 px-4 py-1.5 rounded-full text-sm border transition-all cursor-pointer select-none"
+            :class="selectedTags.includes(tag.id) ? 'bg-emerald-600 text-white shadow-md shadow-emerald-200 border-transparent' : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-300 hover:text-emerald-600'"
+            @click="toggleTag(tag.name)"
+          >
+            {{ tag.name }}
+          </div>
+          <div v-if="displayedTags.length === 0" class="text-sm text-gray-400 py-1.5 px-2">
+             暂无相关标签
+          </div>
+        </div>
+
+        <!-- Right Fade Mask -->
+        <div class="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[var(--bg-color)] to-transparent z-10 pointer-events-none"></div>
+      </div>
+
     </div>
 
     <!-- Masonry Layout -->
