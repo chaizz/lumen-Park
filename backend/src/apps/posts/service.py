@@ -11,7 +11,8 @@ from src.apps.interactions.models import Like, Bookmark
 async def get_liked_posts(db: AsyncSession, user_id: str) -> list[Post]:
     query = select(Post).join(Like, Like.post_id == Post.id).options(
         selectinload(Post.user),
-        selectinload(Post.images)
+        selectinload(Post.images).selectinload(PostImage.exif),
+        selectinload(Post.images).selectinload(PostImage.recipe)
     ).filter(
         Like.user_id == user_id
     ).order_by(Like.created_at.desc())
@@ -26,7 +27,8 @@ async def get_liked_posts(db: AsyncSession, user_id: str) -> list[Post]:
 async def get_bookmarked_posts(db: AsyncSession, user_id: str) -> list[Post]:
     query = select(Post).join(Bookmark, Bookmark.post_id == Post.id).options(
         selectinload(Post.user),
-        selectinload(Post.images)
+        selectinload(Post.images).selectinload(PostImage.exif),
+        selectinload(Post.images).selectinload(PostImage.recipe)
     ).filter(
         Bookmark.user_id == user_id
     ).order_by(Bookmark.created_at.desc())
