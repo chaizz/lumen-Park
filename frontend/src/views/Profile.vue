@@ -219,11 +219,11 @@ watch(() => route.params.id, async (newId) => {
         
         <!-- Stats -->
         <div class="flex space-x-8 mt-4">
-          <div class="text-center cursor-pointer hover:text-blue-500">
+          <div class="text-center cursor-pointer hover:text-emerald-500 transition-colors">
             <div class="text-lg font-bold text-gray-900">0</div>
             <div class="text-sm text-gray-500">关注</div>
           </div>
-          <div class="text-center cursor-pointer hover:text-blue-500">
+          <div class="text-center cursor-pointer hover:text-emerald-500 transition-colors">
             <div class="text-lg font-bold text-gray-900">0</div>
             <div class="text-sm text-gray-500">粉丝</div>
           </div>
@@ -245,7 +245,7 @@ watch(() => route.params.id, async (newId) => {
             <MasonryGrid v-else :items="works">
               <template #default="{ item: post }">
                 <div
-                  class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 cursor-pointer border border-gray-100"
+                  class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 cursor-pointer border border-gray-100"
                   @click="router.push(`/post/${post.id}`)"
                 >
                   <div class="relative">
@@ -255,12 +255,12 @@ watch(() => route.params.id, async (newId) => {
                       class="w-full h-auto object-cover"
                       loading="lazy"
                     />
-                    <div v-if="post.images && post.images.length > 1" class="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-1 rounded">
+                    <div v-if="post.images && post.images.length > 1" class="absolute top-2 right-2 bg-black bg-opacity-30 backdrop-blur-sm text-white p-1 rounded-md">
                        <el-icon><CopyDocument /></el-icon>
                     </div>
                   </div>
                   <div class="p-3">
-                    <h3 class="text-sm font-medium text-gray-900 line-clamp-2">{{ post.title || '无标题' }}</h3>
+                    <h3 class="text-sm font-medium text-gray-800 line-clamp-2">{{ post.title || '无标题' }}</h3>
                   </div>
                 </div>
               </template>
@@ -274,7 +274,7 @@ watch(() => route.params.id, async (newId) => {
             <MasonryGrid v-else :items="likes">
               <template #default="{ item: post }">
                 <div
-                  class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 cursor-pointer border border-gray-100"
+                  class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 cursor-pointer border border-gray-100"
                   @click="router.push(`/post/${post.id}`)"
                 >
                   <div class="relative">
@@ -286,7 +286,7 @@ watch(() => route.params.id, async (newId) => {
                     />
                   </div>
                   <div class="p-3">
-                    <h3 class="text-sm font-medium text-gray-900 line-clamp-2">{{ post.title || '无标题' }}</h3>
+                    <h3 class="text-sm font-medium text-gray-800 line-clamp-2">{{ post.title || '无标题' }}</h3>
                   </div>
                 </div>
               </template>
@@ -299,7 +299,7 @@ watch(() => route.params.id, async (newId) => {
             <MasonryGrid v-else :items="collections">
               <template #default="{ item: post }">
                 <div
-                  class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 cursor-pointer border border-gray-100"
+                  class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 cursor-pointer border border-gray-100"
                   @click="router.push(`/post/${post.id}`)"
                 >
                   <div class="relative">
@@ -311,7 +311,7 @@ watch(() => route.params.id, async (newId) => {
                     />
                   </div>
                   <div class="p-3">
-                    <h3 class="text-sm font-medium text-gray-900 line-clamp-2">{{ post.title || '无标题' }}</h3>
+                    <h3 class="text-sm font-medium text-gray-800 line-clamp-2">{{ post.title || '无标题' }}</h3>
                   </div>
                 </div>
               </template>

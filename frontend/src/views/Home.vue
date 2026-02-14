@@ -64,7 +64,7 @@ onMounted(() => {
     <MasonryGrid :items="posts">
       <template #default="{ item: post }">
         <div
-          class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 cursor-pointer group"
+          class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 cursor-pointer group border border-gray-100"
           @click="router.push(`/post/${post.id}`)"
         >
           <div class="relative">
@@ -76,13 +76,13 @@ onMounted(() => {
               loading="lazy"
             />
             <!-- Multi-image Indicator -->
-            <div v-if="post.images && post.images.length > 1" class="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-1 rounded">
+            <div v-if="post.images && post.images.length > 1" class="absolute top-2 right-2 bg-black bg-opacity-30 backdrop-blur-sm text-white p-1 rounded-md">
                <el-icon><CopyDocument /></el-icon>
             </div>
           </div>
           
           <div class="p-3">
-            <h3 class="text-sm font-medium text-gray-900 line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">{{ post.title || '无标题' }}</h3>
+            <h3 class="text-sm font-medium text-gray-800 line-clamp-2 mb-2 group-hover:text-emerald-600 transition-colors">{{ post.title || '无标题' }}</h3>
             
             <div class="flex items-center justify-between mt-3">
                <!-- User Info -->
@@ -90,7 +90,7 @@ onMounted(() => {
                 <el-avatar :size="20" class="mr-1.5 flex-shrink-0 border border-gray-100" :src="post.user?.avatar">
                   {{ post.user?.username?.charAt(0).toUpperCase() || 'U' }}
                 </el-avatar>
-                <span class="text-xs text-gray-600 truncate">{{ post.user?.username || 'User' }}</span>
+                <span class="text-xs text-gray-500 truncate">{{ post.user?.username || 'User' }}</span>
               </div>
               
               <!-- Only Stats as per requirement -->

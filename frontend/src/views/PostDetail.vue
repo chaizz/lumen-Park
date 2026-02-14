@@ -453,7 +453,7 @@ const prevImage = () => {
             
             <!-- Comment Input -->
             <div class="flex space-x-3 mb-6 comment-input">
-              <el-avatar :size="32" class="flex-shrink-0" :src="userStore.user?.avatar">
+              <el-avatar :size="32" class="flex-shrink-0 border border-gray-100" :src="userStore.user?.avatar">
                  {{ userStore.user?.username?.charAt(0).toUpperCase() || 'ME' }}
               </el-avatar>
               <div class="flex-grow">
@@ -463,9 +463,10 @@ const prevImage = () => {
                    type="textarea" 
                    :rows="2"
                    resize="none"
+                   class="custom-textarea"
                  />
                  <div class="flex justify-between mt-2">
-                    <span v-if="replyTo" class="text-xs text-blue-500 cursor-pointer" @click="replyTo = null">取消回复</span>
+                    <span v-if="replyTo" class="text-xs text-emerald-500 cursor-pointer" @click="replyTo = null">取消回复</span>
                     <span v-else></span>
                     <el-button type="primary" size="small" :loading="submittingComment" @click="handleComment">发布</el-button>
                  </div>
@@ -475,19 +476,19 @@ const prevImage = () => {
             <!-- Comment List -->
             <div v-if="comments.length > 0" class="space-y-6">
                <div v-for="comment in comments" :key="comment.id" class="flex space-x-3">
-                  <el-avatar :size="32" class="flex-shrink-0 mt-1 cursor-pointer" :src="comment.user?.avatar" @click="router.push(`/profile/${comment.user_id}`)">
+                  <el-avatar :size="32" class="flex-shrink-0 mt-1 cursor-pointer border border-gray-100" :src="comment.user?.avatar" @click="router.push(`/profile/${comment.user_id}`)">
                      {{ comment.user?.username?.charAt(0).toUpperCase() }}
                   </el-avatar>
                   <div class="flex-grow">
-                     <div class="bg-gray-50 rounded-lg p-3">
+                     <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
                         <div class="flex justify-between items-center mb-1">
-                           <span class="font-medium text-sm text-gray-900 cursor-pointer" @click="router.push(`/profile/${comment.user_id}`)">{{ comment.user?.username }}</span>
+                           <span class="font-medium text-sm text-gray-900 cursor-pointer hover:text-emerald-600 transition-colors" @click="router.push(`/profile/${comment.user_id}`)">{{ comment.user?.username }}</span>
                            <span class="text-xs text-gray-400">{{ formatDate(comment.created_at) }}</span>
                         </div>
                         <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ comment.content }}</p>
                      </div>
                      <div class="flex items-center mt-1 space-x-4 text-xs text-gray-500 px-1">
-                        <span class="cursor-pointer hover:text-blue-500" @click="setReply(comment, comment.id)">回复</span>
+                        <span class="cursor-pointer hover:text-emerald-500" @click="setReply(comment, comment.id)">回复</span>
                         <span 
                           v-if="userStore.user?.id === post.user_id || userStore.user?.id === comment.user_id"
                           class="cursor-pointer hover:text-red-500 flex items-center" 
@@ -515,11 +516,11 @@ const prevImage = () => {
                      <!-- Replies -->
                      <div v-if="comment.replies && comment.replies.length > 0" class="mt-3 space-y-3 pl-2 border-l-2 border-gray-100">
                         <div v-for="reply in comment.replies" :key="reply.id" class="flex space-x-2">
-                           <el-avatar :size="24" class="flex-shrink-0 mt-1" :src="reply.user?.avatar">
+                           <el-avatar :size="24" class="flex-shrink-0 mt-1 border border-gray-100" :src="reply.user?.avatar">
                               {{ reply.user?.username?.charAt(0).toUpperCase() }}
                            </el-avatar>
                            <div class="flex-grow">
-                              <div class="bg-gray-50 rounded-lg p-2">
+                              <div class="bg-gray-50 rounded-xl p-2 border border-gray-100">
                                  <div class="flex justify-between items-center mb-1">
                                     <span class="font-medium text-xs text-gray-900">{{ reply.user?.username }}</span>
                                     <span class="text-xs text-gray-400">{{ formatDate(reply.created_at) }}</span>
@@ -527,7 +528,7 @@ const prevImage = () => {
                                  <p class="text-xs text-gray-700 whitespace-pre-wrap">{{ reply.content }}</p>
                               </div>
                               <div class="flex items-center mt-1 space-x-4 text-xs text-gray-500 px-1">
-                                 <span class="cursor-pointer hover:text-blue-500" @click="setReply(reply, comment.id)">回复</span>
+                                 <span class="cursor-pointer hover:text-emerald-500" @click="setReply(reply, comment.id)">回复</span>
                                  <span 
                                    v-if="userStore.user?.id === post.user_id || userStore.user?.id === reply.user_id"
                                    class="cursor-pointer hover:text-red-500 flex items-center" 
@@ -565,7 +566,7 @@ const prevImage = () => {
         </div>
 
         <!-- Bottom Actions -->
-        <div class="p-4 border-t border-gray-100 bg-white sticky bottom-0 flex justify-around items-center text-gray-600 z-20">
+        <div class="p-4 border-t border-gray-100 bg-white sticky bottom-0 flex justify-around items-center text-gray-600 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.02)]">
           <div 
             class="flex flex-col items-center cursor-pointer transition-colors group" 
             :class="isLiked ? 'text-red-500' : 'hover:text-red-500'"
@@ -583,11 +584,11 @@ const prevImage = () => {
             </div>
             <span class="text-xs">{{ likesCount > 0 ? likesCount : '点赞' }}</span>
           </div>
-          <div class="flex flex-col items-center cursor-pointer hover:text-blue-500 transition-colors group" @click="() => {
+          <div class="flex flex-col items-center cursor-pointer hover:text-emerald-500 transition-colors group" @click="() => {
              const el = document.getElementById('comments-section');
              if (el) el.scrollIntoView({ behavior: 'smooth' });
           }">
-            <div class="p-2 rounded-full group-hover:bg-blue-50 transition-colors">
+            <div class="p-2 rounded-full group-hover:bg-emerald-50 transition-colors">
               <el-icon :size="24"><ChatDotRound /></el-icon>
             </div>
             <span class="text-xs">{{ comments.length > 0 ? comments.length : '评论' }}</span>
@@ -607,8 +608,8 @@ const prevImage = () => {
             </div>
             <span class="text-xs">{{ isBookmarked ? '已收藏' : '收藏' }}</span>
           </div>
-          <div class="flex flex-col items-center cursor-pointer hover:text-green-500 transition-colors group" @click="handleShare">
-            <div class="p-2 rounded-full group-hover:bg-green-50 transition-colors">
+          <div class="flex flex-col items-center cursor-pointer hover:text-emerald-500 transition-colors group" @click="handleShare">
+            <div class="p-2 rounded-full group-hover:bg-emerald-50 transition-colors">
               <el-icon :size="24"><Share /></el-icon>
             </div>
             <span class="text-xs">分享</span>

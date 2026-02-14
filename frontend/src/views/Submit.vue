@@ -204,8 +204,8 @@ const handlePublish = async () => {
             <div 
               v-for="(img, index) in images" 
               :key="img.id"
-              class="relative group cursor-pointer border-2 rounded-lg overflow-hidden aspect-square transition-all"
-              :class="selectedImageId === img.id ? 'border-blue-500 ring-2 ring-blue-100' : 'border-transparent hover:border-gray-300'"
+              class="relative group cursor-pointer border-2 rounded-xl overflow-hidden aspect-square transition-all"
+              :class="selectedImageId === img.id ? 'border-emerald-500 ring-2 ring-emerald-100' : 'border-transparent hover:border-gray-300'"
               @click="selectedImageId = img.id"
             >
               <img :src="img.url" class="w-full h-full object-cover" />
@@ -214,7 +214,7 @@ const handlePublish = async () => {
                   <el-icon :size="12"><Delete /></el-icon>
                 </div>
               </div>
-              <div v-if="index === 0" class="absolute bottom-0 left-0 right-0 bg-blue-500 text-white text-xs text-center py-0.5 bg-opacity-80">
+              <div v-if="index === 0" class="absolute bottom-0 left-0 right-0 bg-emerald-500 text-white text-xs text-center py-0.5 bg-opacity-80">
                 封面
               </div>
             </div>
@@ -229,7 +229,7 @@ const handlePublish = async () => {
               :disabled="uploading"
               accept="image/jpeg,image/png,image/webp"
             >
-              <div class="w-full h-full flex flex-col items-center justify-center text-gray-400 hover:text-blue-500 bg-gray-50 hover:bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg aspect-square transition-colors">
+              <div class="w-full h-full flex flex-col items-center justify-center text-gray-400 hover:text-emerald-500 bg-gray-50 hover:bg-gray-100 border-2 border-dashed border-gray-300 rounded-xl aspect-square transition-colors">
                 <el-icon :size="24" class="mb-2"><Plus /></el-icon>
                 <span class="text-xs">{{ uploading ? '上传中...' : '添加图片' }}</span>
               </div>

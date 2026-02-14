@@ -1,1 +1,68 @@
 @import "tailwindcss";
+
+:root {
+  /* 小清新 - 鼠尾草绿 (Sage Green) 主题 */
+  --primary-color: #6B9E7D;
+  --primary-dark: #4F7A5E;
+  --primary-light: #A3C9B0;
+  --bg-color: #FAFDF9; /* 极淡的米绿色背景 */
+  
+  /* Element Plus 变量覆盖 */
+  --el-color-primary: #6B9E7D;
+  --el-color-primary-light-3: #95BBAD;
+  --el-color-primary-light-5: #B4D1C6;
+  --el-color-primary-light-7: #D2E6DF;
+  --el-color-primary-light-8: #E1F0EB;
+  --el-color-primary-light-9: #F0F9F6;
+  --el-color-primary-dark-2: #4F7A5E;
+
+  --el-color-success: #88B04B;
+  --el-color-warning: #F0C05A;
+  --el-color-danger: #E07A5F;
+  --el-color-info: #909399;
+
+  /* 边框圆角更圆润 */
+  --el-border-radius-base: 8px;
+  --el-border-radius-small: 4px;
+  --el-border-radius-round: 20px;
+  --el-border-radius-circle: 100%;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: #4A5568; /* 柔和的深灰文字 */
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+}
+
+/* 全局输入框风格优化 */
+.el-input__wrapper, .el-textarea__inner {
+  box-shadow: 0 0 0 1px #E2E8F0 inset !important; /* 更柔和的边框 */
+  background-color: #FFFFFF !important;
+}
+
+.el-input__wrapper.is-focus, .el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px var(--el-color-primary) inset !important;
+}
+
+/* 按钮风格优化 */
+.el-button {
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.el-button--primary {
+  border: none !important;
+  background-color: var(--el-color-primary) !important;
+}
+
+.el-button--primary:hover {
+  background-color: var(--el-color-primary-dark-2) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(107, 158, 125, 0.3);
+}
+
+/* 卡片风格优化 - 增加一点点悬浮感 */
+.bg-white {
+  background-color: #FFFFFF;
+  border: 1px solid #F0F2F5;
+}
