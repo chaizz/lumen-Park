@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '../stores/user';
-import { ArrowDown } from '@element-plus/icons-vue';
+import { ArrowDown, Bell } from '@element-plus/icons-vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -65,6 +65,16 @@ const goToHome = () => {
     <!-- Right User Auth -->
     <div class="flex items-center ml-auto">
       <template v-if="userStore.user">
+        <!-- Notification Bell -->
+        <div 
+          class="mr-6 cursor-pointer text-gray-600 hover:text-emerald-600 transition-colors relative"
+          @click="router.push('/notifications')"
+        >
+          <el-badge :value="userStore.unreadCount" :max="99" :hidden="userStore.unreadCount === 0" class="flex items-center">
+            <el-icon :size="20"><Bell /></el-icon>
+          </el-badge>
+        </div>
+
         <el-button type="primary" class="mr-4" @click="router.push('/submit')">投稿</el-button>
         
         <el-dropdown trigger="click" @command="handleCommand">

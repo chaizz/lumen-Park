@@ -3,6 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from src.apps.interactions.models import Bookmark, Comment, CommentLike, Follow, Like
+from src.apps.notifications.service import create_notification
+from src.apps.notifications.schemas import NotificationCreate, NotificationType
+from src.apps.posts.models import Post
 
 # ... existing code ...
 
@@ -30,6 +33,7 @@ async def get_bookmark_status(db: AsyncSession, post_id: str, user_id: str) -> b
         select(Bookmark).filter(Bookmark.user_id == user_id, Bookmark.post_id == post_id)
     )
     return result.scalars().first() is not None
+
 from src.apps.interactions.schemas import CommentCreate
 from src.apps.posts.models import Post
 
@@ -51,7 +55,8 @@ async def create_comment(db: AsyncSession, comment_in: CommentCreate, user_id: s
         .options(
             selectinload(Comment.user),
             selectinload(Comment.replies),
-            selectinload(Comment.likes)
+            selectinload(Comment.likes),
+            selectinload(Comment.post) # Load post to get author
         )
         .filter(Comment.id == db_comment.id)
     )
@@ -61,6 +66,41 @@ async def create_comment(db: AsyncSession, comment_in: CommentCreate, user_id: s
     comment.likes_count = 0
     comment.is_liked = False
     
+    # --- Notification Trigger ---
+    # Notify Post Author
+    if comment.post.user_id != user_id:
+        await create_notification(
+            db,
+            NotificationCreate(
+                recipient_id=comment.post.user_id,
+                sender_id=user_id,
+                type=NotificationType.COMMENT,
+                post_id=comment.post_id,
+                comment_id=comment.id,
+                content=f"评论了你的作品: {comment.content[:20]}"
+            )
+        )
+        
+    # Notify Parent Comment Author (if reply)
+    if comment.parent_id:
+        # We need to fetch parent comment to get its author
+        parent_result = await db.execute(select(Comment).filter(Comment.id == comment.parent_id))
+        parent_comment = parent_result.scalars().first()
+        
+        if parent_comment and parent_comment.user_id != user_id and parent_comment.user_id != comment.post.user_id:
+            # Avoid double notification if parent author is also post author
+             await create_notification(
+                db,
+                NotificationCreate(
+                    recipient_id=parent_comment.user_id,
+                    sender_id=user_id,
+                    type=NotificationType.COMMENT,
+                    post_id=comment.post_id,
+                    comment_id=comment.id,
+                    content=f"回复了你的评论: {comment.content[:20]}"
+                )
+            )
+
     return comment
 
 from sqlalchemy.orm.attributes import set_committed_value
@@ -165,6 +205,24 @@ async def like_post(db: AsyncSession, post_id: str, user_id: str) -> bool:
             update(Post).where(Post.id == post_id).values(likes_count=Post.likes_count + 1)
         )
         await db.commit()
+        
+        # --- Notification Trigger ---
+        # Fetch post to get author
+        post_result = await db.execute(select(Post).filter(Post.id == post_id))
+        post = post_result.scalars().first()
+        
+        if post and post.user_id != user_id:
+            await create_notification(
+                db,
+                NotificationCreate(
+                    recipient_id=post.user_id,
+                    sender_id=user_id,
+                    type=NotificationType.LIKE,
+                    post_id=post_id,
+                    content="赞了你的作品"
+                )
+            )
+
         return True # Liked
 
 async def get_post_like_status(db: AsyncSession, post_id: str, user_id: str) -> bool:
@@ -208,6 +266,18 @@ async def follow_user(db: AsyncSession, target_user_id: str, current_user_id: st
         new_follow = Follow(follower_id=current_user_id, followed_id=target_user_id)
         db.add(new_follow)
         await db.commit()
+        
+        # --- Notification Trigger ---
+        await create_notification(
+            db,
+            NotificationCreate(
+                recipient_id=target_user_id,
+                sender_id=current_user_id,
+                type=NotificationType.FOLLOW,
+                content="关注了你"
+            )
+        )
+        
         return True # Followed
 
 async def get_follow_status(db: AsyncSession, target_user_id: str, current_user_id: str) -> bool:

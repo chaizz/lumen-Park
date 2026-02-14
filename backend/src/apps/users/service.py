@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func
+from sqlalchemy import func, and_
 from src.apps.users.models import User
 from src.apps.users.schemas import UserCreate, UserUpdate
 from src.apps.interactions.models import Follow
@@ -32,6 +32,61 @@ async def create_user(db: AsyncSession, user: UserCreate) -> User:
     await db.commit()
     await db.refresh(db_user)
     return db_user
+
+async def get_followers(db: AsyncSession, user_id: str, current_user_id: str | None = None) -> list[User]:
+    # Query users who follow `user_id`
+    stmt = select(User).join(Follow, Follow.follower_id == User.id).where(Follow.followed_id == user_id)
+    
+    users_result = await db.execute(stmt)
+    users = users_result.scalars().all()
+    
+    if current_user_id:
+        user_ids = [u.id for u in users]
+        if user_ids:
+            # Check which of these IDs are followed by current_user_id
+            stmt_check = select(Follow.followed_id).where(
+                and_(
+                    Follow.follower_id == current_user_id,
+                    Follow.followed_id.in_(user_ids)
+                )
+            )
+            result = await db.execute(stmt_check)
+            followed_ids = set(result.scalars().all())
+            
+            for user in users:
+                user.is_following = user.id in followed_ids
+    else:
+        for user in users:
+            user.is_following = False
+            
+    return users
+
+async def get_following(db: AsyncSession, user_id: str, current_user_id: str | None = None) -> list[User]:
+    # Query users who are followed by `user_id`
+    stmt = select(User).join(Follow, Follow.followed_id == User.id).where(Follow.follower_id == user_id)
+    
+    users_result = await db.execute(stmt)
+    users = users_result.scalars().all()
+    
+    if current_user_id:
+        user_ids = [u.id for u in users]
+        if user_ids:
+            stmt_check = select(Follow.followed_id).where(
+                and_(
+                    Follow.follower_id == current_user_id,
+                    Follow.followed_id.in_(user_ids)
+                )
+            )
+            result = await db.execute(stmt_check)
+            followed_ids = set(result.scalars().all())
+            
+            for user in users:
+                user.is_following = user.id in followed_ids
+    else:
+        for user in users:
+            user.is_following = False
+            
+    return users
 
 async def get_user_stats(db: AsyncSession, user_id: str) -> dict:
     """

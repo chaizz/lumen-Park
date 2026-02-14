@@ -45,12 +45,7 @@ async def get_current_user(
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-async def get_current_user_optional(
-    db: AsyncSession = Depends(get_db),
-    token: Optional[str] = Depends(reusable_oauth2_optional)
-) -> Optional[User]:
-    if not token:
-        return None
+async def get_current_user_from_token(token: str, db: AsyncSession) -> Optional[User]:
     try:
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
@@ -64,3 +59,11 @@ async def get_current_user_optional(
     result = await db.execute(select(User).filter(User.id == user_id))
     user = result.scalars().first()
     return user
+
+async def get_current_user_optional(
+    db: AsyncSession = Depends(get_db),
+    token: Optional[str] = Depends(reusable_oauth2_optional)
+) -> Optional[User]:
+    if not token:
+        return None
+    return await get_current_user_from_token(token, db)

@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from src.apps.tags.models import Tag
 from src.apps.tags.schemas import TagCreate, TagUpdate
+from src.common.constants import TAG_TO_CATEGORY
 
 async def get_tag_by_name(db: AsyncSession, name: str) -> Optional[Tag]:
     result = await db.execute(select(Tag).where(Tag.name == name))
@@ -50,14 +51,8 @@ async def get_or_create_tags(db: AsyncSession, tag_names: List[str]) -> List[Tag
         name = name.strip()
         if not name: continue
         
-        # Simple heuristic to guess type (can be improved later)
-        tag_type = "other"
-        if "天" in name or "光" in name or "夜" in name:
-             tag_type = "lighting"
-        elif "海" in name or "厅" in name or "室" in name or "街" in name or "园" in name:
-             tag_type = "location"
-        elif "人" in name or "像" in name or "物" in name:
-             tag_type = "subject"
+        # Use centralized mapping for type inference
+        tag_type = TAG_TO_CATEGORY.get(name, "other")
 
         tag_in = TagCreate(name=name, type=tag_type)
         tag = await create_tag(db, tag_in)

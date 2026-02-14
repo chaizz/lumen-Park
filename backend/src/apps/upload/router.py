@@ -5,9 +5,11 @@ from src.utils.minio_client import minio_client
 from src.utils.exif_helper import extract_exif
 from src.core import deps
 from src.apps.users.models import User
+from src.apps.ai.service import get_image_tags
 import uuid
 import os
 import io
+import tempfile
 
 router = APIRouter()
 
@@ -49,6 +51,26 @@ async def upload_image(
         # Reset stream or use fresh one for EXIF
         exif_info = extract_exif(io.BytesIO(contents)) 
         
+        # AI Tagging (Non-blocking attempt, or blocking if we want result immediately)
+        # To provide immediate feedback in the UI, we must await it.
+        # Save temp file for AI processing (CLIP expects path or PIL Image)
+        # Our service expects path currently, let's modify it or save temp.
+        # Service updated to accept path. Let's save a temp file.
+        suggested_tags = []
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_ext}") as tmp:
+                tmp.write(contents)
+                tmp_path = tmp.name
+            
+            # Call AI service
+            suggested_tags = await get_image_tags(tmp_path)
+            
+            # Clean up temp file
+            os.remove(tmp_path)
+        except Exception as e:
+            print(f"AI Tagging failed: {e}")
+            # Don't fail the upload if AI fails
+        
         file_url = minio_client.upload_file(
             file_data, 
             file_name, 
@@ -59,7 +81,8 @@ async def upload_image(
             "url": file_url, 
             "exif": exif_info,
             "width": width,
-            "height": height
+            "height": height,
+            "suggested_tags": suggested_tags
         }
     except Exception as e:
         # Check if it is the size limit exception we just raised

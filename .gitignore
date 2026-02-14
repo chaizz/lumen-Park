@@ -22,3 +22,5 @@ Thumbs.db
 backend/alembic/versions/__pycache__/
 backend/data/
 backend/uploads/
+backend/src/core/model/
+backend/models/

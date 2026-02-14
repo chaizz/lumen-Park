@@ -1,169 +1,115 @@
 # Lumen Park - 技术架构文档
 
-## 1. 系统概览
-本系统采用现代化的 **FastAPI** 后端和 **Vue 3** 前端构建，并使用 Docker Compose 进行统一部署。
+## 1. 架构概览
+Lumen Park 采用现代化的前后端分离架构，注重性能、可维护性和开发效率。
+- **后端**: FastAPI (Python) 提供高性能的 RESTful API。
+- **前端**: Vue 3 + Vite 提供响应式、组件化的用户界面。
+- **数据**: MySQL (业务数据) + Redis (缓存/会话) + MinIO (对象存储)。
+- **AI**: 本地部署的 Transformers 模型进行内容识别。
 
-## 2. 目录结构
+## 2. 后端架构 (Backend)
 
-### 2.1 根目录
-```text
-Lumen-Park/
-├── backend/            # Python FastAPI 项目
-├── frontend/           # Vue 3 项目
-├── deploy/             # Docker Compose 及基础设施配置
-├── docs/               # 项目文档
-├── AGENTS.md           # 角色定义
-└── README.md           # 项目入口说明
+### 2.1 技术栈
+- **Framework**: FastAPI (基于 Starlette 和 Pydantic)
+- **Database ORM**: SQLAlchemy 2.0 (AsyncIO)
+- **Migration**: Alembic
+- **Validation**: Pydantic v2
+- **Task Queue**: BackgroundTasks (轻量级) / Celery (规划中)
+- **AI Inference**: PyTorch + Transformers (Hugging Face)
+
+### 2.2 目录结构 (`backend/src`)
+```
+src/
+├── apps/               # 业务模块
+│   ├── ai/             # AI 服务 (CLIP 模型加载与推理)
+│   ├── auth/           # 认证 (JWT, Login)
+│   ├── interactions/   # 互动 (Like, Comment, Follow)
+│   ├── notifications/  # 通知系统
+│   ├── posts/          # 作品管理
+│   ├── tags/           # 标签管理
+│   ├── upload/         # 文件上传
+│   └── users/          # 用户管理
+├── common/             # 公共常量、枚举 (如 TAG_CATEGORIES)
+├── core/               # 核心配置
+│   ├── config.py       # 环境变量加载
+│   ├── deps.py         # 依赖注入 (DB Session, Current User)
+│   ├── security.py     # 密码哈希, Token 生成
+│   └── model/          # 本地 AI 模型文件存储
+├── database/           # 数据库连接
+└── utils/              # 工具函数 (EXIF 解析等)
 ```
 
-### 2.2 后端 (`backend/`)
-由 `uv` 管理。
-```text
-backend/
-├── src/
-│   ├── apps/           # 业务领域模块
-│   │   ├── users/      # 认证、个人资料
-│   │   ├── posts/      # 图片、配方管理
-│   │   ├── interactions/ # 点赞、评论
-│   │   ├── notifications/ # 消息中心
-│   │   └── upload/     # 文件上传服务
-│   ├── core/           # 框架核心扩展
-│   │   ├── config.py   # 配置管理 (Pydantic)
-│   │   ├── security.py # JWT, 哈希加密
-│   │   └── exceptions.py
-│   ├── database/       # 数据访问层
-│   │   ├── session.py  # 异步引擎
-│   │   └── base.py     # 声明式基类
-│   ├── common/         # 通用枚举、常量
-│   ├── utils/          # 工具库 (S3, EXIF)
-│   ├── main.py         # FastAPI 应用工厂
-│   └── run.py          # 启动脚本
-├── tests/              # Pytest 测试套件
-├── alembic/            # 数据库迁移
-├── pyproject.toml      # 依赖管理 (uv)
-├── alembic.ini
+### 2.3 核心设计模式
+- **依赖注入 (Dependency Injection)**: 广泛用于数据库会话获取 (`get_db`) 和当前用户验证 (`get_current_user`)。
+- **Repository/Service Pattern**: Controller (Router) -> Service (业务逻辑) -> Model (数据访问)，保持代码解耦。
+- **异步编程 (Asynchronous)**: 全链路 `async/await`，最大化 I/O 密集型任务的并发能力。
+
+### 2.4 数据模型关系 (ER Diagram 简述)
+- `User` 1:N `Post`
+- `User` 1:N `Comment`
+- `User` N:N `User` (Follows)
+- `Post` 1:N `PostImage`
+- `Post` N:N `Tag` (通过 `post_tags` 关联表)
+- `Post` 1:N `Like`
+- `Post` 1:N `Comment`
+
+## 3. 前端架构 (Frontend)
+
+### 3.1 技术栈
+- **Framework**: Vue 3 (Composition API)
+- **Build Tool**: Vite
+- **State Management**: Pinia
+- **Router**: Vue Router 4
+- **UI Library**: Element Plus + TailwindCSS
+- **HTTP Client**: Axios
+
+### 3.2 目录结构 (`frontend/src`)
+```
+src/
+├── api/            # API 接口封装
+├── assets/         # 静态资源
+├── components/     # 通用组件 (NavBar, UserList, etc.)
+├── router/         # 路由配置
+├── stores/         # Pinia 状态管理 (Auth, etc.)
+├── views/          # 页面级组件 (Home, Profile, Submit, etc.)
+└── App.vue
 ```
 
-### 2.3 前端 (`frontend/`)
-由 `pnpm` 管理。
-```text
-frontend/
-├── src/
-│   ├── assets/
-│   ├── components/     # 可复用 UI 组件
-│   ├── views/          # 页面级组件
-│   ├── stores/         # Pinia 状态管理
-│   ├── router/         # Vue Router 路由
-│   ├── api/            # Axios 封装与接口
-│   ├── types/          # TypeScript 类型定义
-│   └── App.vue
-├── public/
-├── index.html
-├── vite.config.ts
-├── tailwind.config.js
-├── postcss.config.js
-└── package.json
+### 3.3 关键实现
+- **响应式布局**: 结合 TailwindCSS 的 Utility Classes 和 Element Plus 的 Grid 系统。
+- **组件通信**: 使用 `props` 和 `emit` 进行父子通信，使用 Pinia 进行跨组件状态共享（如用户信息）。
+- **动态路由**: 基于用户登录状态的路由守卫 (`beforeEach`)。
+
+## 4. 基础设施与部署
+
+### 4.1 容器化
+项目使用 Docker Compose 进行编排，包含以下服务：
+- `backend`: Python 应用容器。
+- `frontend`: Nginx 容器（生产环境）或 Node 开发服务器。
+- `db`: MySQL 8.0。
+- `redis`: Redis 7.0。
+- `minio`: S3 兼容的对象存储。
+
+### 4.2 AI 模型部署策略
+- **本地加载**: 为了节省 API 成本并保护隐私，CLIP 模型直接下载到 `backend/src/core/model` 目录。
+- **初始化**: 应用启动时检查模型文件，如果不存在则自动从 Hugging Face 下载。
+- **单例模式**: `ImageTagger` 类为单例，避免重复加载模型占用内存。
+
+## 5. 接口规范
+遵循 RESTful API 设计原则：
+- `GET /resource`: 获取列表
+- `GET /resource/{id}`: 获取详情
+- `POST /resource`: 创建
+- `PUT /resource/{id}`: 全量更新
+- `PATCH /resource/{id}`: 部分更新
+- `DELETE /resource/{id}`: 删除
+
+统一响应结构：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": { ... }
+}
 ```
-
-## 3. 数据库设计 (ERD)
-
-### Users (用户表)
-- `id`: UUID (主键)
-- `username`: String (唯一)
-- `email`: String (唯一)
-- `hashed_password`: String
-- `avatar`: String (URL)
-
-### Posts (帖子表)
-- `id`: 自增主键 (主键)
-- `user_id`: UUID (外键)
-- `image_path`: String (MinIO 路径)
-- `title`: String
-- `description`: Text
-- `created_at`: Datetime
-
-### ExifData (EXIF 数据表)
-- `post_id`: UUID (主键, 外键)
-- `camera_make`: String (相机厂商)
-- `camera_model`: String (相机型号)
-- `lens`: String (镜头)
-- `iso`: Integer
-- `aperture`: Float (光圈)
-- `shutter_speed`: String (快门速度)
-- `focal_length`: Float (焦距)
-
-### FujiRecipes (富士配方表)
-- `post_id`: UUID (主键, 外键)
-- `simulation`: Enum (胶片模拟类型)
-- `dynamic_range`: Enum (动态范围)
-- `wb`: String (白平衡)
-- `wb_shift_r`: Integer (白平衡偏移 R)
-- `wb_shift_b`: Integer (白平衡偏移 B)
-- `color`: Integer (色彩)
-- `sharpness`: Integer (锐度)
-- `highlights`: Integer (高光)
-- `shadows`: Integer (阴影)
-- `grain`: String (颗粒)
-- `color_chrome`: String (色彩效果)
-
-### Interactions (互动)
-- `comments`: 用户与帖子的评论关联表。
-- `likes`: 用户与帖子的点赞关联表。
-- `bookmarks`: 用户与帖子的收藏关联表（新增）。
-
-### Notifications (消息中心)
-- `id`: UUID (主键)
-- `recipient_id`: UUID (接收者, FK -> Users)
-- `sender_id`: UUID (发送者, FK -> Users, 可空)
-- `type`: Enum (like, comment, follow, system)
-- `entity_id`: UUID (关联实体ID, 如 post_id, comment_id)
-- `entity_type`: String (post, comment, user)
-- `is_read`: Boolean (默认 False)
-- `content`: Text (系统通知内容或评论摘要)
-- `created_at`: Datetime
-
-### 3.4 前端 (Frontend)
-*   **框架**：Vue 3 + Vite
-*   **状态管理**：Pinia
-*   **UI 组件库**：Element Plus + Tailwind CSS
-*   **交互逻辑**：
-    *   使用 `vue-use` 实现无限滚动 (`useInfiniteScroll`)。
-    *   组件懒加载与路由守卫。
-*   **API 交互**：Axios 封装，支持请求拦截与错误处理。
-
-## 4. 数据流设计 (Data Flow)
-### 4.1 用户认证流程
-1.  用户提交登录表单 (username, password)。
-2.  后端验证密码，生成 JWT Token。
-3.  前端存储 Token 至 LocalStorage 和 Pinia Store。
-4.  后续请求携带 `Authorization: Bearer <token>`。
-
-### 4.2 首页加载流程
-1.  **初始化**：
-    *   前端 `Home.vue` 发起 `GET /api/v1/posts/?skip=0&limit=20`。
-    *   后端查询数据库，返回前 20 条帖子数据（包含 `views_count`, `likes_count`）。
-2.  **滚动刷新**：
-    *   当用户滚动至底部，触发 `loadMore`。
-    *   前端计算新的 `skip` 值（当前列表长度）。
-    *   发起请求获取下一页数据，并追加至 `posts` 列表。
-    *   若返回数据为空，标记 `noMore`。
-
-### 4.3 帖子详情浏览流程
-1.  **进入详情页**：
-    *   前端 `PostDetail.vue` 发起 `GET /api/v1/posts/{id}`。
-2.  **后端处理**：
-    *   查询数据库获取帖子详情。
-    *   **浏览量统计**：自动将 `views_count` + 1（原子操作）。
-    *   返回包含最新 `views_count` 的帖子数据。
-3.  **前端展示**：
-    *   更新 UI 上的浏览量和点赞量。
-    *   并发请求获取点赞状态 (`/interactions/likes/status`) 和评论列表 (`/interactions/comments`)。
-
-## 5. 技术栈
-- **语言**: Python 3.12+, TypeScript 5+
-- **框架**: FastAPI, Vue 3
-- **数据库**: MySQL 8.0 (异步驱动: aiomysql/asyncmy)
-- **ORM**: SQLAlchemy 2.0 (Async)
-- **缓存**: Redis 7
-- **存储**: MinIO (兼容 S3 协议)
-- **工具**: UV, Ruff, Pytest, PNPM, Vite, TailwindCSS
+*(注：目前直接返回数据或 Pydantic 模型，未来可考虑封装统一 Response)*

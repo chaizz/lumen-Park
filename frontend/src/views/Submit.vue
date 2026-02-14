@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, watch, nextTick } from 'vue';
+import { ref, reactive, computed, watch, nextTick, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElInput } from 'element-plus';
 import { UploadFilled, Plus, Camera, Picture, Tickets, Delete, CopyDocument, CollectionTag } from '@element-plus/icons-vue';
@@ -22,10 +22,21 @@ const inputTagValue = ref('');
 const inputTagVisible = ref(false);
 const InputRef = ref<InstanceType<typeof ElInput>>();
 
-// Predefined Tags (could be fetched from API later)
-const predefinedTags = [
-  '阴天', '晴天', '室内', '夜景', '海边', '咖啡厅', '人像', '街拍', '富士直出', '胶片感'
-];
+// Tag Categories from backend
+const tagCategories = ref<Record<string, any>>({});
+const loadingTags = ref(false);
+
+const fetchTagConfig = async () => {
+  loadingTags.value = true;
+  try {
+    const res: any = await request.get('/tags/config');
+    tagCategories.value = res;
+  } catch (error) {
+    console.error('Failed to load tag config', error);
+  } finally {
+    loadingTags.value = false;
+  }
+};
 
 const handleCloseTag = (tag: string) => {
   postTags.value.splice(postTags.value.indexOf(tag), 1);
@@ -157,6 +168,25 @@ const customUploadRequest = async (options: any) => {
       selectedImageId.value = newImage.id;
     }
     
+    // Auto-fill suggested tags from AI
+    if (res.suggested_tags && res.suggested_tags.length > 0) {
+      // If no tags yet, take all
+      if (postTags.value.length === 0) {
+        postTags.value = res.suggested_tags;
+        ElMessage.success('已根据图片内容自动生成标签');
+      } else {
+        // Merge without duplicates, respecting limit
+        const newTags = res.suggested_tags.filter((t: string) => !postTags.value.includes(t));
+        if (newTags.length > 0) {
+           const availableSlots = 5 - postTags.value.length;
+           if (availableSlots > 0) {
+             postTags.value.push(...newTags.slice(0, availableSlots));
+             ElMessage.success('已根据图片内容补充相关标签');
+           }
+        }
+      }
+    }
+    
     ElMessage.success('图片上传成功');
     onSuccess(res);
   } catch (err) {
@@ -228,6 +258,10 @@ const handlePublish = async () => {
     publishing.value = false;
   }
 };
+
+onMounted(() => {
+  fetchTagConfig();
+});
 </script>
 
 <template>
@@ -334,18 +368,32 @@ const handlePublish = async () => {
                   + 自定义标签
                 </el-button>
               </div>
-              <div class="flex flex-wrap gap-2 mt-2">
-                <span class="text-xs text-gray-400 mr-1 self-center">推荐:</span>
-                <el-tag 
-                  v-for="tag in predefinedTags" 
-                  :key="tag"
-                  class="cursor-pointer hover:opacity-80 transition-opacity user-select-none"
-                  :type="postTags.includes(tag) ? 'success' : 'info'"
-                  :effect="postTags.includes(tag) ? 'dark' : 'plain'"
-                  @click="togglePredefinedTag(tag)"
-                >
-                  {{ tag }}
-                </el-tag>
+              <p class="text-xs text-gray-400 mt-1 mb-3">
+                 自定义标签将自动归类为 "其他"。
+              </p>
+              
+              <!-- Grouped Tags -->
+              <div v-if="loadingTags" class="text-sm text-gray-400 py-2">加载标签中...</div>
+              <div v-else class="space-y-3 mt-4">
+                <div v-for="(cat, key) in tagCategories" :key="key" class="flex items-start">
+                  <div class="text-sm text-gray-500 w-16 pt-1 flex-shrink-0 flex items-center">
+                    <span class="mr-1">{{ cat.icon }}</span>
+                    <span>{{ cat.label }}</span>
+                  </div>
+                  <div class="flex flex-wrap gap-2 flex-grow">
+                    <el-tag 
+                      v-for="tag in cat.tags" 
+                      :key="tag"
+                      class="cursor-pointer hover:opacity-80 transition-opacity user-select-none border-0"
+                      :class="postTags.includes(tag) ? '' : 'bg-gray-100 text-gray-600'"
+                      :type="postTags.includes(tag) ? 'success' : 'info'"
+                      :effect="postTags.includes(tag) ? 'dark' : 'light'"
+                      @click="togglePredefinedTag(tag)"
+                    >
+                      {{ tag }}
+                    </el-tag>
+                  </div>
+                </div>
               </div>
             </el-form-item>
           </el-form>

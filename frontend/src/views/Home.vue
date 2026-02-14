@@ -36,15 +36,32 @@ const skip = ref(0);
 const limit = 20;
 
 // Filters
-const allTags = ref<Tag[]>([]);
+const tagCategories = ref<Record<string, any>>({});
+const allTags = ref<Tag[]>([]); // Keep flat list for lookup if needed, or derived from categories
 const selectedTags = ref<string[]>([]);
 const activeCategory = ref<string>('all'); // all, lighting, location, subject
 
-// Fetch tags on mount
-const fetchTags = async () => {
+// Fetch tag config from backend
+const fetchTagConfig = async () => {
   try {
-    const res: any = await request.get('/tags/');
-    allTags.value = res;
+    const res: any = await request.get('/tags/config');
+    tagCategories.value = res;
+    // We also need to fetch all tags stats to show counts if we want, 
+    // or just use the config for static display.
+    // But the requirement implies we want to filter by these tags.
+    // The previous implementation fetched /tags/ which returned tags with IDs.
+    // The new config returns strings. We need to map them or fetch real tag objects.
+    // Actually, filtering by tag name is easier if backend supports it, but backend expects IDs?
+    // Let's check backend. Router says: url += `&tag_ids=${id}`;
+    // So we DO need tag IDs.
+    // Let's fetch /tags/ (which returns all tags with IDs and types) and organize them 
+    // based on the config structure (for order and icons) or just use the type from DB.
+    
+    // Actually, if we use the "config" approach, we are trusting the config for structure.
+    // But we need IDs for the API.
+    // Let's fetch all tags from DB, and then group them according to the config keys.
+    const tagsRes: any = await request.get('/tags/');
+    allTags.value = tagsRes;
   } catch (e) {
     console.error('Failed to fetch tags', e);
   }
@@ -52,8 +69,25 @@ const fetchTags = async () => {
 
 // Computed tags for display based on category
 const displayedTags = computed(() => {
-  if (activeCategory.value === 'all') return allTags.value;
+  if (activeCategory.value === 'all') {
+    return allTags.value;
+  }
   return allTags.value.filter(t => t.type === activeCategory.value);
+});
+
+// Computed categories for the tabs
+const categories = computed(() => {
+  // Convert config object to array for v-for
+  // Add 'all' manually
+  const cats = [
+    { key: 'all', label: '全部', icon: '' },
+    ...Object.entries(tagCategories.value).map(([key, val]: [string, any]) => ({
+      key,
+      label: val.label,
+      icon: val.icon
+    }))
+  ];
+  return cats;
 });
 
 const toggleTag = (tagName: string) => {
@@ -107,7 +141,7 @@ const loadMore = () => {
 };
 
 onMounted(() => {
-  fetchTags();
+  fetchTagConfig();
   fetchPosts();
 });
 </script>
@@ -121,32 +155,14 @@ onMounted(() => {
       <!-- Level 1: Category Tabs -->
       <div class="flex items-center space-x-2 overflow-x-auto no-scrollbar py-1">
         <button 
-          class="px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-200 flex-shrink-0"
-          :class="activeCategory === 'all' ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'"
-          @click="activeCategory = 'all'"
+          v-for="cat in categories"
+          :key="cat.key"
+          class="px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-200 flex-shrink-0 flex items-center"
+          :class="activeCategory === cat.key ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'"
+          @click="activeCategory = cat.key"
         >
-          全部
-        </button>
-        <button 
-          class="px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-200 flex-shrink-0"
-          :class="activeCategory === 'lighting' ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'"
-          @click="activeCategory = 'lighting'"
-        >
-          ✨ 光线
-        </button>
-        <button 
-          class="px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-200 flex-shrink-0"
-          :class="activeCategory === 'location' ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'"
-          @click="activeCategory = 'location'"
-        >
-          📍 地点
-        </button>
-        <button 
-          class="px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-200 flex-shrink-0"
-          :class="activeCategory === 'subject' ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'"
-          @click="activeCategory = 'subject'"
-        >
-          📷 主题
+          <span v-if="cat.icon" class="mr-1">{{ cat.icon }}</span>
+          {{ cat.label }}
         </button>
       </div>
 

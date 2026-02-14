@@ -28,6 +28,9 @@ class UserResponse(UserBase):
     following_count: int = 0
     likes_count: int = 0
     
+    # Context specific
+    is_following: Optional[bool] = None
+
     model_config = ConfigDict(from_attributes=True)
 
 class Token(BaseModel):

@@ -23,6 +23,7 @@
 - **模型**: 使用 Pydantic v2 进行数据验证（Schema），SQLAlchemy 2.0 进行 ORM 映射（Model）。
 - **导入顺序**: 标准库 -> 第三方库 -> 本地模块 (`from src.xxx import ...`)。
 - **外键**: 映射到数据库中（使用 `ForeignKey`），并正确配置 `relationship`（使用 `selectinload` 进行预加载）。
+- 一定要遵循事务。
 
 ### 2.2 前端 (Vue/TS)
 

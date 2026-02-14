@@ -29,6 +29,24 @@ const routes = [
     component: () => import('../views/Submit.vue'),
     meta: { requiresAuth: true }
   },
+  {
+    path: '/profile/:id/followers',
+    name: 'Followers',
+    component: () => import('../views/SocialList.vue'),
+    meta: { requiresAuth: true } // Can be false if we allow public view
+  },
+  {
+    path: '/notifications',
+    name: 'Notifications',
+    component: () => import('../views/Notifications.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/profile/:id/following',
+    name: 'Following',
+    component: () => import('../views/SocialList.vue'),
+    meta: { requiresAuth: true }
+  },
 ];
 
 const router = createRouter({

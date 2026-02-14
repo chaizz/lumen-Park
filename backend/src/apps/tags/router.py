@@ -1,12 +1,20 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database.session import get_db
-from src.apps.tags import service, schemas
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from src.apps.tags import schemas, service
+from src.common.constants import TAG_CATEGORIES
 from src.core import deps
+from src.database.session import get_db
 
 router = APIRouter()
+
+@router.get("/config")
+async def get_tag_config():
+    """
+    Get the centralized tag configuration (categories and their preset tags).
+    """
+    return TAG_CATEGORIES
 
 @router.get("/", response_model=List[schemas.TagResponse])
 async def read_tags(

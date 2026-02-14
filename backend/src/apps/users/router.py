@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -105,3 +105,21 @@ async def read_user_by_id(
     # Get stats
     stats = await service.get_user_stats(db, user.id)
     return {**user.__dict__, **stats}
+
+@router.get("/{user_id}/followers", response_model=List[schemas.UserResponse])
+async def read_followers(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User | None = Depends(deps.get_current_user_optional)
+) -> Any:
+    current_user_id = current_user.id if current_user else None
+    return await service.get_followers(db, user_id=user_id, current_user_id=current_user_id)
+
+@router.get("/{user_id}/following", response_model=List[schemas.UserResponse])
+async def read_following(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User | None = Depends(deps.get_current_user_optional)
+) -> Any:
+    current_user_id = current_user.id if current_user else None
+    return await service.get_following(db, user_id=user_id, current_user_id=current_user_id)

@@ -19,6 +19,7 @@ from src.apps.users.models import User
 from src.apps.posts.models import Post, ExifData, FujiRecipe
 from src.apps.interactions.models import Comment, Like
 from src.apps.notifications.models import Notification
+from src.apps.tags.models import Tag, post_tags
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
