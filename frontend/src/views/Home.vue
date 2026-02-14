@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import request from '../api/request';
-import { View, Star, CopyDocument } from '@element-plus/icons-vue';
+import { View, Star, CopyDocument, Filter } from '@element-plus/icons-vue';
 import MasonryGrid from '../components/MasonryGrid.vue';
 // Time format is no longer needed in the card footer as per requirements
 // import { formatDistanceToNow } from 'date-fns';
@@ -18,6 +18,14 @@ interface Post {
   likes_count: number;
   images: any[]; // To check for multi-image
   user: any;
+  tags?: any[];
+}
+
+interface Tag {
+  id: string;
+  name: string;
+  type: string;
+  count: number;
 }
 
 const router = useRouter();
@@ -27,10 +35,56 @@ const noMore = ref(false);
 const skip = ref(0);
 const limit = 20;
 
+// Filters
+const allTags = ref<Tag[]>([]);
+const selectedTags = ref<string[]>([]);
+const activeCategory = ref<string>('all'); // all, lighting, location, subject
+
+// Fetch tags on mount
+const fetchTags = async () => {
+  try {
+    const res: any = await request.get('/tags/');
+    allTags.value = res;
+  } catch (e) {
+    console.error('Failed to fetch tags', e);
+  }
+}
+
+// Computed tags for display based on category
+const displayedTags = computed(() => {
+  if (activeCategory.value === 'all') return allTags.value;
+  return allTags.value.filter(t => t.type === activeCategory.value);
+});
+
+const toggleTag = (tagName: string) => {
+  const tagId = allTags.value.find(t => t.name === tagName)?.id;
+  if (!tagId) return;
+
+  const index = selectedTags.value.indexOf(tagId);
+  if (index === -1) {
+    selectedTags.value.push(tagId);
+  } else {
+    selectedTags.value.splice(index, 1);
+  }
+  // Reset and reload
+  skip.value = 0;
+  posts.value = [];
+  noMore.value = false;
+  fetchPosts();
+};
+
 const fetchPosts = async () => {
   loading.value = true;
   try {
-    const response: any = await request.get(`/posts/?skip=${skip.value}&limit=${limit}`);
+    let url = `/posts/?skip=${skip.value}&limit=${limit}`;
+    // Append tag_ids
+    if (selectedTags.value.length > 0) {
+      selectedTags.value.forEach(id => {
+        url += `&tag_ids=${id}`;
+      });
+    }
+    
+    const response: any = await request.get(url);
     if (response.length < limit) {
       noMore.value = true;
     }
@@ -53,6 +107,7 @@ const loadMore = () => {
 };
 
 onMounted(() => {
+  fetchTags();
   fetchPosts();
 });
 </script>
@@ -60,6 +115,36 @@ onMounted(() => {
 <template>
   <div class="max-w-7xl mx-auto px-4 py-6" v-infinite-scroll="loadMore" :infinite-scroll-distance="200" :infinite-scroll-disabled="loading || noMore">
     
+    <!-- Filter Section -->
+    <div class="mb-8 bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-bold text-gray-800 flex items-center">
+          <el-icon class="mr-2 text-emerald-600"><Filter /></el-icon> 场景与分类
+        </h2>
+        <el-radio-group v-model="activeCategory" size="small">
+          <el-radio-button label="all">全部</el-radio-button>
+          <el-radio-button label="lighting">光线</el-radio-button>
+          <el-radio-button label="location">地点</el-radio-button>
+          <el-radio-button label="subject">主题</el-radio-button>
+        </el-radio-group>
+      </div>
+      
+      <div class="flex flex-wrap gap-2">
+        <div 
+          v-for="tag in displayedTags" 
+          :key="tag.id"
+          class="px-3 py-1.5 rounded-full text-xs cursor-pointer transition-all duration-200 border"
+          :class="selectedTags.includes(tag.id) ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200'"
+          @click="toggleTag(tag.name)"
+        >
+          {{ tag.name }}
+        </div>
+        <div v-if="displayedTags.length === 0" class="text-xs text-gray-400 py-1">
+           暂无标签
+        </div>
+      </div>
+    </div>
+
     <!-- Masonry Layout -->
     <MasonryGrid :items="posts">
       <template #default="{ item: post }">

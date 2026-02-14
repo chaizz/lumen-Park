@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue';
+import { ref, reactive, computed, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
-import { UploadFilled, Plus, Camera, Picture, Tickets, Delete, CopyDocument } from '@element-plus/icons-vue';
+import { ElInput } from 'element-plus';
+import { UploadFilled, Plus, Camera, Picture, Tickets, Delete, CopyDocument, CollectionTag } from '@element-plus/icons-vue';
 import type { UploadProps, UploadUserFile } from 'element-plus';
 import { ElMessage } from 'element-plus';
 import request from '../api/request';
@@ -16,6 +17,52 @@ const publishing = ref(false);
 // Global Post Info
 const postTitle = ref('');
 const postDescription = ref('');
+const postTags = ref<string[]>([]);
+const inputTagValue = ref('');
+const inputTagVisible = ref(false);
+const InputRef = ref<InstanceType<typeof ElInput>>();
+
+// Predefined Tags (could be fetched from API later)
+const predefinedTags = [
+  '阴天', '晴天', '室内', '夜景', '海边', '咖啡厅', '人像', '街拍', '富士直出', '胶片感'
+];
+
+const handleCloseTag = (tag: string) => {
+  postTags.value.splice(postTags.value.indexOf(tag), 1);
+}
+
+const showInputTag = () => {
+  inputTagVisible.value = true;
+  nextTick(() => {
+    InputRef.value!.input!.focus();
+  });
+}
+
+const handleInputConfirm = () => {
+  if (inputTagValue.value) {
+    if (!postTags.value.includes(inputTagValue.value)) {
+      if (postTags.value.length >= 5) {
+        ElMessage.warning('最多添加 5 个标签');
+      } else {
+        postTags.value.push(inputTagValue.value);
+      }
+    }
+  }
+  inputTagVisible.value = false;
+  inputTagValue.value = '';
+}
+
+const togglePredefinedTag = (tag: string) => {
+  if (postTags.value.includes(tag)) {
+    handleCloseTag(tag);
+  } else {
+    if (postTags.value.length >= 5) {
+      ElMessage.warning('最多添加 5 个标签');
+      return;
+    }
+    postTags.value.push(tag);
+  }
+}
 
 // Images List with individual params
 interface ImageItem {
@@ -157,6 +204,7 @@ const handlePublish = async () => {
     const payload = {
       title: postTitle.value,
       description: postDescription.value,
+      tags: postTags.value,
       images: images.value.map(img => ({
         image_path: img.url,
         width: img.width,
@@ -171,6 +219,7 @@ const handlePublish = async () => {
     // Clear form instead of redirecting
     postTitle.value = '';
     postDescription.value = '';
+    postTags.value = [];
     images.value = [];
     selectedImageId.value = null;
   } catch (error: any) {
@@ -257,6 +306,47 @@ const handlePublish = async () => {
                 maxlength="500"
                 show-word-limit
               />
+            </el-form-item>
+            
+            <el-form-item label="场景标签">
+              <div class="flex flex-wrap gap-2 mb-2">
+                <el-tag
+                  v-for="tag in postTags"
+                  :key="tag"
+                  closable
+                  :disable-transitions="false"
+                  @close="handleCloseTag(tag)"
+                  type="success"
+                  effect="dark"
+                >
+                  {{ tag }}
+                </el-tag>
+                <el-input
+                  v-if="inputTagVisible"
+                  ref="InputRef"
+                  v-model="inputTagValue"
+                  class="w-20"
+                  size="small"
+                  @keyup.enter="handleInputConfirm"
+                  @blur="handleInputConfirm"
+                />
+                <el-button v-else class="button-new-tag" size="small" @click="showInputTag">
+                  + 自定义标签
+                </el-button>
+              </div>
+              <div class="flex flex-wrap gap-2 mt-2">
+                <span class="text-xs text-gray-400 mr-1 self-center">推荐:</span>
+                <el-tag 
+                  v-for="tag in predefinedTags" 
+                  :key="tag"
+                  class="cursor-pointer hover:opacity-80 transition-opacity user-select-none"
+                  :type="postTags.includes(tag) ? 'success' : 'info'"
+                  :effect="postTags.includes(tag) ? 'dark' : 'plain'"
+                  @click="togglePredefinedTag(tag)"
+                >
+                  {{ tag }}
+                </el-tag>
+              </div>
             </el-form-item>
           </el-form>
         </div>
