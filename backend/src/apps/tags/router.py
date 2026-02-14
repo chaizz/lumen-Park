@@ -25,7 +25,7 @@ async def read_tags(
 async def create_tag(
     tag_in: schemas.TagCreate,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(deps.get_current_active_user) # Only logged in users can create tags directly
+    current_user = Depends(deps.get_current_user) # Only logged in users can create tags directly
 ):
     """
     Create a new tag manually.
