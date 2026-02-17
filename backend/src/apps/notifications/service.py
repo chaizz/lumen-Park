@@ -130,12 +130,16 @@ async def get_unread_count(db: AsyncSession, user_id: str) -> int:
     result = await db.execute(stmt)
     return result.scalar() or 0
 
-async def mark_as_read(db: AsyncSession, notification_id: str, user_id: str):
+async def mark_as_read(db: AsyncSession, notification_id: str, user_id: str) -> Notification:
     stmt = update(Notification).where(
         and_(Notification.id == notification_id, Notification.recipient_id == user_id)
     ).values(is_read=True)
     await db.execute(stmt)
     await db.commit()
+    
+    # Fetch updated notification
+    result = await db.execute(select(Notification).where(Notification.id == notification_id))
+    return result.scalars().first()
 
 async def mark_all_as_read(db: AsyncSession, user_id: str):
     stmt = update(Notification).where(

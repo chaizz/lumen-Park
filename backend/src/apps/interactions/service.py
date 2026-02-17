@@ -9,22 +9,31 @@ from src.apps.posts.models import Post
 
 # ... existing code ...
 
+from sqlalchemy.exc import IntegrityError
+
 async def bookmark_post(db: AsyncSession, post_id: str, user_id: str) -> bool:
-    # Check if already bookmarked
-    result = await db.execute(
-        select(Bookmark).filter(Bookmark.user_id == user_id, Bookmark.post_id == post_id)
-    )
-    existing_bookmark = result.scalars().first()
-    
-    if existing_bookmark:
-        await db.delete(existing_bookmark)
-        await db.commit()
-        return False # Unbookmarked
-    else:
+    try:
         new_bookmark = Bookmark(user_id=user_id, post_id=post_id)
         db.add(new_bookmark)
         await db.commit()
         return True # Bookmarked
+    except IntegrityError:
+        await db.rollback()
+        # If insertion fails due to duplicate, it means it was already bookmarked.
+        # So we should unbookmark it.
+        # But wait, standard logic is toggle. 
+        # If we rely on IntegrityError, we assume it exists.
+        # Let's try to delete.
+        result = await db.execute(
+            select(Bookmark).filter(Bookmark.user_id == user_id, Bookmark.post_id == post_id)
+        )
+        existing_bookmark = result.scalars().first()
+        if existing_bookmark:
+            await db.delete(existing_bookmark)
+            await db.commit()
+            return False # Unbookmarked
+        # If we are here, it means integrity error was something else or race condition resolved weirdly.
+        return False
 
 async def get_bookmark_status(db: AsyncSession, post_id: str, user_id: str) -> bool:
     if not user_id:
@@ -108,15 +117,61 @@ from sqlalchemy.orm.attributes import set_committed_value
 
 async def get_comments_by_post(db: AsyncSession, post_id: str, current_user_id: str = None) -> list[Comment]:
     # Fetch all comments for the post
+    # Using subquery to count likes to avoid N+1
+    # Actually, we can just load the likes relationship eagerly (selectinload) if N is small,
+    # but for scalability, we should use a separate query or count.
+    # However, to check is_liked, we need to know if current user liked it.
+    
+    # Current implementation uses selectinload(Comment.likes) which loads ALL likes.
+    # If a comment has 10k likes, this is bad.
+    
+    # Better approach:
+    # 1. Fetch comments.
+    # 2. Fetch like counts for these comments (group by comment_id).
+    # 3. Fetch if current user liked these comments (where user_id = current).
+    
+    # Let's keep it simple but optimized:
+    # We will still fetch comments, but we won't load ALL likes.
+    # We will issue a separate query to get counts and user status.
+    
     query = select(Comment).options(
-        selectinload(Comment.user),
-        selectinload(Comment.likes)
+        selectinload(Comment.user)
+        # remove selectinload(Comment.likes) to avoid loading all objects
     ).filter(
         Comment.post_id == post_id
-    ).order_by(Comment.created_at.asc()) # Order by created_at to ensure parents come before children
+    ).order_by(Comment.created_at.asc())
     
     result = await db.execute(query)
     all_comments = result.scalars().all()
+    
+    if not all_comments:
+        return []
+
+    comment_ids = [c.id for c in all_comments]
+    
+    # 1. Get Like Counts
+    # SELECT comment_id, COUNT(*) FROM comment_likes WHERE comment_id IN (...) GROUP BY comment_id
+    from sqlalchemy import func
+    likes_count_stmt = (
+        select(CommentLike.comment_id, func.count())
+        .where(CommentLike.comment_id.in_(comment_ids))
+        .group_by(CommentLike.comment_id)
+    )
+    likes_count_result = await db.execute(likes_count_stmt)
+    likes_count_map = {row[0]: row[1] for row in likes_count_result.all()}
+    
+    # 2. Get User Like Status
+    liked_map = {}
+    if current_user_id:
+        user_likes_stmt = (
+            select(CommentLike.comment_id)
+            .where(
+                CommentLike.comment_id.in_(comment_ids),
+                CommentLike.user_id == current_user_id
+            )
+        )
+        user_likes_result = await db.execute(user_likes_stmt)
+        liked_map = {row[0]: True for row in user_likes_result.all()}
     
     # Organize comments into a tree structure
     comment_map = {}
@@ -124,15 +179,11 @@ async def get_comments_by_post(db: AsyncSession, post_id: str, current_user_id: 
     
     # First pass: Initialize all comments and put them in a map
     for comment in all_comments:
-        # Calculate likes count and status manually
-        likes_list = comment.likes
-        comment.likes_count = len(likes_list)
-        comment.is_liked = any(l.user_id == current_user_id for l in likes_list) if current_user_id else False
+        # Calculate likes count and status from maps
+        comment.likes_count = likes_count_map.get(comment.id, 0)
+        comment.is_liked = liked_map.get(comment.id, False)
         
         # Initialize replies list
-        # Use set_committed_value to initialize the relationship without triggering a load.
-        # This is critical to avoid "MissingGreenlet" errors in async context when 
-        # assigning to a relationship that hasn't been loaded.
         set_committed_value(comment, "replies", [])
         
         comment_map[comment.id] = comment
@@ -144,8 +195,6 @@ async def get_comments_by_post(db: AsyncSession, post_id: str, current_user_id: 
             if parent:
                 parent.replies.append(comment)
             else:
-                # Parent not found (maybe deleted?), treat as root or ignore?
-                # Let's treat as root for now to avoid data loss in UI
                 root_comments.append(comment)
         else:
             root_comments.append(comment)
@@ -183,24 +232,10 @@ async def delete_comment(db: AsyncSession, comment_id: str, user_id: str) -> boo
     return True
 
 async def like_post(db: AsyncSession, post_id: str, user_id: str) -> bool:
-    # Check if already liked
-    result = await db.execute(
-        select(Like).filter(Like.user_id == user_id, Like.post_id == post_id)
-    )
-    existing_like = result.scalars().first()
-    
-    if existing_like:
-        await db.delete(existing_like)
-        # Decrement post.likes_count
-        await db.execute(
-            update(Post).where(Post.id == post_id).values(likes_count=Post.likes_count - 1)
-        )
-        await db.commit()
-        return False # Unliked
-    else:
+    try:
         new_like = Like(user_id=user_id, post_id=post_id)
         db.add(new_like)
-        # Increment post.likes_count
+        # Optimistic update: increment count
         await db.execute(
             update(Post).where(Post.id == post_id).values(likes_count=Post.likes_count + 1)
         )
@@ -224,6 +259,23 @@ async def like_post(db: AsyncSession, post_id: str, user_id: str) -> bool:
             )
 
         return True # Liked
+    except IntegrityError:
+        await db.rollback()
+        # Already liked, so unlike
+        result = await db.execute(
+            select(Like).filter(Like.user_id == user_id, Like.post_id == post_id)
+        )
+        existing_like = result.scalars().first()
+        
+        if existing_like:
+            await db.delete(existing_like)
+            # Decrement post.likes_count
+            await db.execute(
+                update(Post).where(Post.id == post_id).values(likes_count=Post.likes_count - 1)
+            )
+            await db.commit()
+            return False # Unliked
+        return False
 
 async def get_post_like_status(db: AsyncSession, post_id: str, user_id: str) -> bool:
     if not user_id:

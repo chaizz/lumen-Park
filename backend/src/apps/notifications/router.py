@@ -42,18 +42,10 @@ async def mark_as_read(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
-    await service.mark_as_read(db, notification_id=id, user_id=current_user.id)
-    # Return updated notification? Or just success. 
-    # Since we don't fetch the object in service mark_as_read (it's an update stmt), 
-    # we might just return a dummy or fetch it again.
-    # For simplicity, let's just return a success message or the object if needed.
-    # Schema expects NotificationResponse, so let's fetch it.
-    # But wait, schemas.NotificationResponse requires fields.
-    # Let's change return type or fetch it.
-    # Fetching is cleaner.
-    # ... Actually, for "mark read", frontend usually just updates UI.
-    return {"id": id, "is_read": True, "recipient_id": current_user.id, "type": "system", "created_at": "2024-01-01T00:00:00"} # Dummy response to satisfy schema partially or change schema. 
-    # Better: change service to return the object.
+    notification = await service.mark_as_read(db, notification_id=id, user_id=current_user.id)
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return notification
 
 @router.post("/read-all")
 async def mark_all_as_read(

@@ -1,52 +1,52 @@
 
-import asyncio
-import sys
-import os
-
-# Add project root to path
-sys.path.append(os.getcwd())
-
-from src.database.session import SessionLocal
+import pytest
+import uuid
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+from src.database.base import Base
 from src.apps.interactions.service import like_post
-from src.apps.posts.models import Post
 from src.apps.users.models import User
-from sqlalchemy import select
+from src.apps.tags.models import post_tags
+from src.apps.posts.models import Post
 
+# Use SQLite for testing
+SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+@pytest.mark.asyncio
 async def test_like():
-    async with SessionLocal() as db:
-        print("Getting a user and post...")
-        user = (await db.execute(select(User))).scalars().first()
-        post = (await db.execute(select(Post))).scalars().first()
+    engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=False)
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async with async_session() as db:
+        # Create user
+        user = User(username="testuser", email="test@example.com", hashed_password="hashedpassword")
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+
+        # Create post
+        post = Post(title="Test Post", user_id=user.id, likes_count=0)
+        db.add(post)
+        await db.commit()
+        await db.refresh(post)
+
+        # 1. Like
+        result = await like_post(db, post.id, user.id)
+        assert result == True
+        await db.refresh(post)
+        assert post.likes_count == 1
+
+        # 2. Duplicate Like (Race Condition Logic)
+        # We can't easily simulate race condition here without threads, 
+        # but we can verify the logic handles re-entry correctly (toggle behavior)
         
-        if not user or not post:
-            print("No user or post found.")
-            return
+        # Standard toggle behavior: calling like_post again should UNLIKE
+        result = await like_post(db, post.id, user.id)
+        assert result == False
+        await db.refresh(post)
+        assert post.likes_count == 0
 
-        print(f"User: {user.id}, Post: {post.id}")
-        print(f"Initial Likes: {post.likes_count}")
-
-        # Test Like
-        print("Liking post...")
-        try:
-            is_liked = await like_post(db, post.id, user.id)
-            print(f"Liked? {is_liked}")
-            
-            # Check count
-            await db.refresh(post)
-            print(f"New Likes: {post.likes_count}")
-            
-            # Toggle (Unlike)
-            print("Unliking post...")
-            is_liked = await like_post(db, post.id, user.id)
-            print(f"Liked? {is_liked}")
-            
-            await db.refresh(post)
-            print(f"Final Likes: {post.likes_count}")
-            
-        except Exception as e:
-            print(f"Error liking post: {e}")
-            import traceback
-            traceback.print_exc()
-
-if __name__ == "__main__":
-    asyncio.run(test_like())
+    await engine.dispose()
