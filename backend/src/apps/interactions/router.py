@@ -1,5 +1,5 @@
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.session import get_db
@@ -108,3 +108,12 @@ async def get_bookmark_status(
 ) -> Any:
     is_bookmarked = await service.get_bookmark_status(db, post_id, current_user.id)
     return {"status": "bookmarked" if is_bookmarked else "unbookmarked"}
+
+@router.delete("/bookmarks", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_bookmarks(
+    post_ids: List[str] = Body(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+) -> None:
+    await service.delete_bookmarks(db, post_ids, current_user.id)
+    return None

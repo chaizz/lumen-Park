@@ -1,4 +1,4 @@
-from sqlalchemy import update
+from sqlalchemy import update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -34,6 +34,15 @@ async def bookmark_post(db: AsyncSession, post_id: str, user_id: str) -> bool:
             return False # Unbookmarked
         # If we are here, it means integrity error was something else or race condition resolved weirdly.
         return False
+
+async def delete_bookmarks(db: AsyncSession, post_ids: list[str], user_id: str):
+    await db.execute(
+        delete(Bookmark).where(
+            Bookmark.user_id == user_id,
+            Bookmark.post_id.in_(post_ids)
+        )
+    )
+    await db.commit()
 
 async def get_bookmark_status(db: AsyncSession, post_id: str, user_id: str) -> bool:
     if not user_id:

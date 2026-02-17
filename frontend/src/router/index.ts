@@ -42,6 +42,22 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/album/create',
+    name: 'AlbumCreate',
+    component: () => import('../views/AlbumCreate.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/album/:id',
+    name: 'AlbumDetail',
+    component: () => import('../views/AlbumDetail.vue'), // To be implemented
+  },
+  {
+    path: '/album/:id/3d',
+    name: 'Gallery3D',
+    component: () => import('../views/Gallery3D.vue'),
+  },
+  {
     path: '/profile/:id/following',
     name: 'Following',
     component: () => import('../views/SocialList.vue'),

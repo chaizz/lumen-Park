@@ -22,10 +22,11 @@ async def read_posts(
     skip: int = 0,
     limit: int = 100,
     user_id: str = None,
+    keyword: str = None,
     tag_ids: Optional[List[str]] = Query(None),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
-    posts = await service.get_posts(db, skip=skip, limit=limit, user_id=user_id, tag_ids=tag_ids)
+    posts = await service.get_posts(db, skip=skip, limit=limit, user_id=user_id, tag_ids=tag_ids, keyword=keyword)
     return posts
 
 @router.get("/liked/{user_id}", response_model=List[schemas.PostResponse])
@@ -38,9 +39,10 @@ async def read_liked_posts(
 @router.get("/bookmarked/{user_id}", response_model=List[schemas.PostResponse])
 async def read_bookmarked_posts(
     user_id: str,
+    keyword: str = None,
     db: AsyncSession = Depends(get_db),
 ) -> Any:
-    return await service.get_bookmarked_posts(db, user_id=user_id)
+    return await service.get_bookmarked_posts(db, user_id=user_id, keyword=keyword)
 
 @router.get("/{post_id}", response_model=schemas.PostResponse)
 async def read_post(

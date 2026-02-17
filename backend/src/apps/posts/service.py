@@ -1,4 +1,4 @@
-from sqlalchemy import update
+from sqlalchemy import update, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -26,7 +26,7 @@ async def get_liked_posts(db: AsyncSession, user_id: str) -> list[Post]:
         if post.likes_count is None: post.likes_count = 0
     return posts
 
-async def get_bookmarked_posts(db: AsyncSession, user_id: str) -> list[Post]:
+async def get_bookmarked_posts(db: AsyncSession, user_id: str, keyword: str = None) -> list[Post]:
     query = select(Post).join(Bookmark, Bookmark.post_id == Post.id).options(
         selectinload(Post.user),
         selectinload(Post.images).selectinload(PostImage.exif),
@@ -34,7 +34,12 @@ async def get_bookmarked_posts(db: AsyncSession, user_id: str) -> list[Post]:
         selectinload(Post.tags)
     ).filter(
         Bookmark.user_id == user_id
-    ).order_by(Bookmark.created_at.desc())
+    )
+
+    if keyword:
+        query = query.filter(or_(Post.title.ilike(f"%{keyword}%"), Post.description.ilike(f"%{keyword}%")))
+
+    query = query.order_by(Bookmark.created_at.desc())
     
     result = await db.execute(query)
     posts = result.scalars().all()
@@ -121,7 +126,7 @@ async def get_post(db: AsyncSession, post_id: str) -> Post | None:
     )
     return result.scalars().first()
 
-async def get_posts(db: AsyncSession, skip: int = 0, limit: int = 100, user_id: str = None, tag_ids: list[str] = None) -> list[Post]:
+async def get_posts(db: AsyncSession, skip: int = 0, limit: int = 100, user_id: str = None, tag_ids: list[str] = None, keyword: str = None) -> list[Post]:
     query = select(Post).options(
         selectinload(Post.user),
         # For list view, we might only need the first image or all, let's load all for now
@@ -139,6 +144,9 @@ async def get_posts(db: AsyncSession, skip: int = 0, limit: int = 100, user_id: 
         # Let's start with simple IN logic
         from src.apps.tags.models import post_tags
         query = query.join(Post.tags).filter(post_tags.c.tag_id.in_(tag_ids)).distinct()
+    
+    if keyword:
+        query = query.filter(or_(Post.title.ilike(f"%{keyword}%"), Post.description.ilike(f"%{keyword}%")))
         
     query = query.offset(skip).limit(limit).order_by(Post.created_at.desc())
     

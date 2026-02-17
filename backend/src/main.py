@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.apps.interactions.router import router as interactions_router
 from src.apps.notifications.router import router as notifications_router
 from src.apps.posts.router import router as posts_router
+from src.apps.albums.router import router as albums_router
 from src.apps.tags.router import router as tags_router
 from src.apps.upload.router import router as upload_router
 from src.apps.users.router import router as users_router
@@ -25,6 +26,7 @@ def create_app() -> FastAPI:
     app.include_router(posts_router, prefix=f"{settings.API_V1_STR}/posts", tags=["posts"])
     app.include_router(interactions_router, prefix=f"{settings.API_V1_STR}/interactions", tags=["interactions"])
     app.include_router(notifications_router, prefix=f"{settings.API_V1_STR}/notifications", tags=["notifications"])
+    app.include_router(albums_router, prefix=f"{settings.API_V1_STR}/albums", tags=["albums"])
     app.include_router(upload_router, prefix=f"{settings.API_V1_STR}/upload", tags=["upload"])
     app.include_router(tags_router, prefix=f"{settings.API_V1_STR}/tags", tags=["tags"])
     
