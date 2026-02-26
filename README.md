@@ -65,10 +65,6 @@ Lumen-Park/
 
 *   [产品设计总览 (PRODUCT_DESIGN.md)](docs/PRODUCT_DESIGN.md)
 *   [技术架构设计 (ARCHITECTURE.md)](docs/ARCHITECTURE.md)
-*   [首页设计 (HOME_PAGE_DESIGN.md)](docs/HOME_PAGE_DESIGN.md)
-*   [详情页设计 (POST_DETAIL_DESIGN.md)](docs/POST_DETAIL_DESIGN.md)
-*   [个人中心设计 (PERSONAL_CENTER_DESIGN.md)](docs/PERSONAL_CENTER_DESIGN.md)
-*   [投稿页设计 (SUBMISSION_PAGE_DESIGN.md)](docs/SUBMISSION_PAGE_DESIGN.md)
 
 ## 🚀 快速开始 (本地开发)
 

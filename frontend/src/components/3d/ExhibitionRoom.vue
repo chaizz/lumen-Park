@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { DoubleSide } from 'three';
+import { computed, ref } from 'vue';
+import { DoubleSide, Object3D } from 'three';
 import ArtFrame from './ArtFrame.vue';
 import { useGalleryLayout } from '../../composables/useGalleryLayout';
 
@@ -13,6 +13,14 @@ const { config, framePositions, spotlightPositions } = useGalleryLayout(props.po
 
 // 兼容旧的frames变量名
 const frames = computed(() => framePositions.value);
+
+// 存储目标对象的引用数组
+const targetRefs = ref<{ [key: number]: Object3D | null }>({});
+
+// 设置目标引用的函数
+const setTargetRef = (el: any, index: number) => {
+  if (el) targetRefs.value[index] = el;
+};
 </script>
 
 <template>
@@ -38,18 +46,23 @@ const frames = computed(() => framePositions.value);
     </TresMesh>
     
     <!-- Dynamic ceiling spotlights -->
-    <TresSpotLight 
-      v-for="(spotlight, index) in spotlightPositions" 
-      :key="index"
-      :position="spotlight.position"
-      :target="[spotlight.target[0], spotlight.target[1], spotlight.target[2]]"
-      :intensity="1.5" 
-      :angle="0.8" 
-      :penumbra="0.4" 
-      :distance="20"
-      color="#ffffff"
-      cast-shadow 
-    />
+    <template v-for="(spotlight, index) in spotlightPositions" :key="index">
+      <TresObject3D
+        :ref="(el) => setTargetRef(el, index)"
+        :position="spotlight.target"
+      />
+      <TresSpotLight 
+        v-if="targetRefs[index]"
+        :position="spotlight.position"
+        :target="targetRefs[index]"
+        :intensity="1.5" 
+        :angle="0.8" 
+        :penumbra="0.4" 
+        :distance="20"
+        color="#ffffff"
+        :cast-shadow="false" 
+      />
+    </template>
     
     <!-- Art Frames -->
     <Suspense v-for="(frame, idx) in frames" :key="frame.post.id">

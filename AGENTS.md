@@ -50,6 +50,11 @@
 - `components/`: 通用/原子级组件。
 - `router/`: 路由配置。
 
+### 文档 (`docs/`)
+
+- `PRODUCT_DESIGN.md`: 产品设计总览。包含功能详述、页面设计、用户流程。
+- `ARCHITECTURE.md`: 技术架构设计。包含后端/前端架构、API 规范、核心功能实现细节。
+
 ## 4. 开发工作流 (Workflow)
 
 1. **数据库变更**:
@@ -76,7 +81,7 @@
 ## 6. 自我检查清单 (Self-Check)
 
 - [ ] 新增的 Python 包是否添加到了 `pyproject.toml`？
-- [ ] 每个功能开发完毕是否都更新了设计文档？
+- [ ] 每个功能开发完毕是否都更新了设计文档 (PRODUCT_DESIGN.md / ARCHITECTURE.md)？
 - [ ] 数据库模型修改是否生成了迁移文件？
 - [ ] 所有的 API 是否都有对应的 Pydantic Schema？
 - [ ] 前端组件是否适配了移动端（Tailwind 响应式类）？

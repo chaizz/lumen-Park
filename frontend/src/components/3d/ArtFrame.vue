@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted } from 'vue';
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
 import { Html } from '@tresjs/cientos';
+import { Object3D } from 'three';
 import { useArtFrameMaterials, ArtFrameConfigGenerator } from '../../composables/useArtFrameMaterials';
 
 const props = defineProps<{
@@ -14,6 +15,7 @@ const isHovered = ref(false);
 const materials = ref<any>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
+const spotTarget = ref<Object3D | null>(null);
 
 // 获取图片URL
 const imageUrl = computed(() => {
@@ -90,10 +92,14 @@ watch(imageUrl, (newUrl) => {
   }
 }, { immediate: true });
 
-// 组件挂载时加载
-onMounted(() => {
-  if (imageUrl.value) {
-    loadMaterials();
+// 组件卸载时清理资源
+onUnmounted(() => {
+  if (materials.value) {
+    Object.values(materials.value).forEach((material: any) => {
+      if (material.map) material.map.dispose();
+      if (material.dispose) material.dispose();
+    });
+    materials.value = null;
   }
 });
 </script>
@@ -174,14 +180,16 @@ onMounted(() => {
     </TresMesh>
     
     <!-- Spotlight for this frame -->
+    <TresObject3D ref="spotTarget" :position="[0, 0, 0]" />
     <TresSpotLight 
+        v-if="spotTarget"
+        :target="spotTarget"
         :position="[0, 2, 1.5]" 
-        :target="[0, 0, 0]"
         :intensity="isHovered ? 4 : 2" 
         :angle="0.6" 
         :penumbra="0.5" 
         :distance="10"
-        cast-shadow 
+        :cast-shadow="false" 
     />
 
     <!-- Loading Indicator -->
